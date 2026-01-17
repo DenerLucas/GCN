@@ -443,7 +443,10 @@ function openAdminModal() {
         syncTopbar();
       });
     },
-  });// ===================== ADMIN: CRIAR JOGO =====================
+  });
+}
+
+// ===================== ADMIN: CRIAR JOGO =====================
 function openCreateGameModal() {
   if (!state.auth || state.auth.role !== "admin") {
     TOASTS.show("Apenas admin pode criar jogos.", "error");
@@ -597,8 +600,6 @@ function openLogsModal() {
     footerHTML: `<button class="btn ok" data-modal-close>Fechar</button>`,
   });
 }
-}
-
 function syncTopbar() {
   const info = $("#sessionInfo");
   const btnCreate = $("#btnCreate");
