@@ -443,7 +443,160 @@ function openAdminModal() {
         syncTopbar();
       });
     },
+  });// ===================== ADMIN: CRIAR JOGO =====================
+function openCreateGameModal() {
+  if (!state.auth || state.auth.role !== "admin") {
+    TOASTS.show("Apenas admin pode criar jogos.", "error");
+    return;
+  }
+
+  openModal({
+    title: "Criar Jogo",
+    contentHTML: `
+      <div class="form">
+        <div class="field">
+          <label>Título *</label>
+          <input id="cgTitle" type="text" placeholder="Ex: STG 14 Dezembro" />
+        </div>
+
+        <div class="field">
+          <label>Campo *</label>
+          <input id="cgField" type="text" placeholder="Ex: STG / Arcanjos / ..." />
+        </div>
+
+        <div class="field">
+          <label>Data e hora *</label>
+          <input id="cgDate" type="datetime-local" />
+        </div>
+
+        <div class="field">
+          <label>Vagas totais *</label>
+          <input id="cgSlots" type="number" min="1" value="20" />
+        </div>
+
+        <div class="field">
+          <label>Descrição</label>
+          <input id="cgDesc" type="text" placeholder="Ex: Skirmish 5x5 / MilSim..." />
+        </div>
+
+        <div class="field inline">
+          <label class="chk">
+            <input id="cgGuestsOnly" type="checkbox" />
+            <span>Só Convidados</span>
+          </label>
+        </div>
+
+        <div class="field inline">
+          <label class="chk">
+            <input id="cgPinned" type="checkbox" />
+            <span>Fixado</span>
+          </label>
+        </div>
+      </div>
+    `,
+    footerHTML: `
+      <button class="btn" data-modal-close>Cancelar</button>
+      <button class="btn ok" id="cgSave">Criar</button>
+    `,
+    onMount: () => {
+      $("#cgSave").addEventListener("click", () => {
+        const title = ($("#cgTitle").value || "").trim();
+        const field = ($("#cgField").value || "").trim();
+        const date = $("#cgDate").value;
+        const total = Number($("#cgSlots").value || 0);
+        const desc = ($("#cgDesc").value || "").trim();
+        const guestsOnly = !!$("#cgGuestsOnly").checked;
+        const pinned = !!$("#cgPinned").checked;
+
+        if (!title || !field || !date || !total || total < 1) {
+          TOASTS.show("Preenche os campos obrigatórios (*).", "error");
+          return;
+        }
+
+        const g = {
+          id: uid(),
+          title,
+          field,
+          date,                // datetime-local já vem em formato ISO local
+          description: desc,
+          status: "open",
+          pinned,
+          total_slots: total,
+          guests_only: guestsOnly,
+          crest: null,
+          attendees: [],
+          location: { text: "Braga, Portugal" },
+        };
+
+        state.games.push(g);
+        saveDB({ games: state.games });
+        closeModal();
+        TOASTS.show("Jogo criado ✅");
+        render();
+      });
+    },
   });
+}
+
+// ===================== ADMIN: MODERADORES (DEMO) =====================
+function openModeratorsModal() {
+  if (!state.auth || state.auth.role !== "admin") {
+    TOASTS.show("Apenas admin pode gerir moderadores.", "error");
+    return;
+  }
+
+  openModal({
+    title: "Moderadores",
+    contentHTML: `
+      <div class="muted" style="margin-bottom:10px">
+        (Protótipo) Nesta versão estática, isto é apenas uma prévia. No backend vai existir criação/remoção real.
+      </div>
+
+      <div class="form">
+        <div class="field">
+          <label>Novo moderador (email ou utilizador)</label>
+          <input id="modNew" type="text" placeholder="Ex: stg@campo.pt" />
+        </div>
+      </div>
+
+      <div style="margin-top:14px" class="muted">
+        👉 Próximo passo (backend): guardar moderadores + limitar edição aos jogos do próprio moderador.
+      </div>
+    `,
+    footerHTML: `
+      <button class="btn" data-modal-close>Fechar</button>
+      <button class="btn ok" id="modAdd">Simular Adição</button>
+    `,
+    onMount: () => {
+      $("#modAdd").addEventListener("click", () => {
+        const v = ($("#modNew").value || "").trim();
+        if (!v) return TOASTS.show("Escreve um utilizador/email.", "error");
+        TOASTS.show(`(Demo) Moderador adicionado: ${v}`);
+        $("#modNew").value = "";
+      });
+    },
+  });
+}
+
+// ===================== ADMIN: LOGS (DEMO) =====================
+function openLogsModal() {
+  if (!state.auth || state.auth.role !== "admin") {
+    TOASTS.show("Apenas admin pode ver logs.", "error");
+    return;
+  }
+
+  // Versão estática: logs simples "fakes" só para UI
+  const lines = [
+    `[${new Date().toLocaleString("pt-PT")}] Admin abriu painel`,
+    `[${new Date().toLocaleString("pt-PT")}] (Demo) Logs ainda não persistem sem backend`,
+  ].join("\n");
+
+  openModal({
+    title: "Logs",
+    contentHTML: `<pre class="pre">${lines}</pre>`,
+    footerHTML: `<button class="btn ok" data-modal-close>Fechar</button>`,
+  });
+}
 }
 
 function syncTopbar() {
@@ -482,6 +635,23 @@ document.addEventListener("click", (e) => {
   // Admin
   if (btn.id === "btnAdmin") {
     openAdminModal();
+    return;
+  }
+    // Criar Jogo (admin)
+  if (btn.id === "btnCreate") {
+    openCreateGameModal();
+    return;
+  }
+
+  // Moderadores (admin)
+  if (btn.id === "btnUsers") {
+    openModeratorsModal();
+    return;
+  }
+
+  // Logs (admin)
+  if (btn.id === "btnLogs") {
+    openLogsModal();
     return;
   }
 
