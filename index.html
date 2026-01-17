@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#111618" />
 
-  <!-- Favicons (pasta: assets/img/favicon/) -->
+  <!-- Favicons (ajusta se os nomes/paths forem diferentes) -->
   <link rel="icon" type="image/png" href="assets/img/favicon/favicon-96x96.png" sizes="96x96" />
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon/favicon.svg" />
   <link rel="shortcut icon" href="assets/img/favicon/favicon.ico" />
@@ -25,10 +25,10 @@
 
     <div class="top-actions">
       <span id="sessionInfo" class="muted"></span>
-      <button id="btnLogs" class="btn" hidden>📜 Logs</button>
-      <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
       <button id="btnCreate" class="btn" hidden>➕ Criar Jogo</button>
-      <button id="btnAdmin" class="btn ghost" aria-pressed="false">⚙️ Admin</button>
+      <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
+      <button id="btnLogs" class="btn" hidden>📜 Logs</button>
+      <button id="btnAdmin" class="btn ghost">⚙️ Admin</button>
     </div>
   </header>
 
@@ -40,7 +40,7 @@
 
   <section class="filters">
     <input id="search" placeholder="Pesquisar jogo, campo, local…" />
-    <div id="filters" class="chips" role="tablist" aria-label="Filtros rápidos">
+    <div id="filters" role="tablist" aria-label="Filtros rápidos">
       <button class="chip active" data-filter="all" aria-selected="true" type="button">Todos</button>
       <button class="chip" data-filter="open" aria-selected="false" type="button">Abertos</button>
       <button class="chip" data-filter="lotado" aria-selected="false" type="button">Lotados</button>
@@ -63,244 +63,228 @@
   <!-- Toasts -->
   <div class="toasts"></div>
 
-  <!-- ===================== TEMPLATES (MODAIS) ===================== -->
+  <!-- ===================== TEMPLATES DOS MODAIS ===================== -->
 
-  <!-- Login -->
+  <!-- LOGIN -->
   <template id="tpl-login">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Admin">
       <div class="modal-hd">
-        <h3>Login de Administrador</h3>
+        <h3>Admin</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
+
       <div class="modal-bd">
-        <label>Utilizador</label>
-        <input id="lg_user" autocomplete="username" />
+        <label class="lbl">Utilizador</label>
+        <input id="lg_user" class="inp" autocomplete="username" />
 
-        <label>Palavra-passe</label>
-        <input id="lg_pass" type="password" autocomplete="current-password" />
+        <label class="lbl">Senha</label>
+        <input id="lg_pass" class="inp" type="password" autocomplete="current-password" />
 
-        <p class="muted" style="margin-top:10px;">
-          Demo: admin / airsoft2025 — (podes trocar depois no backend)
+        <p class="muted" style="margin-top:10px">
+          (demo) admin / airsoft2025
         </p>
       </div>
+
       <div class="modal-ft">
-        <button class="btn ghost" data-close>Cancelar</button>
         <button id="confirmLogin" class="btn ok">Entrar</button>
       </div>
     </div>
   </template>
 
-  <!-- Join -->
+  <!-- JOIN -->
   <template id="tpl-join">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Inscrição">
       <div class="modal-hd">
-        <h3>Inscrição</h3>
+        <h3>Inscrever</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
+
       <div class="modal-bd">
-        <input id="joinGameId" hidden />
+        <input id="joinGameId" type="hidden" />
 
-        <label>Nickname</label>
-        <input id="nickname" placeholder="Ex: Ghost" />
+        <label class="lbl">Nickname</label>
+        <input id="nickname" class="inp" placeholder="Ex: Ghost" />
 
-        <label>Equipa (opcional)</label>
-        <input id="team" placeholder="Ex: Alpha" />
+        <label class="lbl">Equipa (opcional)</label>
+        <input id="team" class="inp" placeholder="Ex: Bravo" />
 
-        <div class="row" style="align-items:center; gap:10px; margin-top:10px;">
+        <div class="row" style="align-items:center; gap:10px; margin-top:10px">
           <input id="guest" type="checkbox" />
-          <label for="guest" style="margin:0;">Convidado (sem APD)</label>
+          <label for="guest">Convidado (sem APD)</label>
         </div>
 
-        <label style="margin-top:10px;">APD</label>
-        <input id="apd" placeholder="Ex: APD1234" />
+        <label class="lbl" style="margin-top:10px">APD (se não for convidado)</label>
+        <input id="apd" class="inp" placeholder="Ex: APD1234" />
 
-        <div class="row" style="align-items:center; gap:10px; margin-top:10px;">
-          <input id="rememberMe" type="checkbox" />
-          <label for="rememberMe" style="margin:0;">Guardar dados para a próxima</label>
-        </div>
-
-        <div class="row" style="align-items:center; gap:10px; margin-top:10px;">
+        <div class="row" style="align-items:center; gap:10px; margin-top:12px">
           <input id="consent" type="checkbox" />
-          <label for="consent" style="margin:0;">Aceita o consentimento de dados (mínimo necessário).</label>
+          <label for="consent">Aceita que os dados sejam guardados para gestão da lista.</label>
+        </div>
+
+        <div class="row" style="align-items:center; gap:10px; margin-top:8px">
+          <input id="rememberMe" type="checkbox" />
+          <label for="rememberMe">Lembrar dados neste dispositivo</label>
         </div>
       </div>
 
       <div class="modal-ft">
-        <button class="btn ghost" data-close>Cancelar</button>
         <button id="confirmJoin" class="btn ok">Confirmar</button>
       </div>
     </div>
   </template>
 
-  <!-- Leave -->
+  <!-- LEAVE -->
   <template id="tpl-leave">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Sair">
       <div class="modal-hd">
-        <h3>Sair do jogo</h3>
+        <h3>Remover inscrição</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
+
       <div class="modal-bd">
-        <input id="leaveGameId" hidden />
-        <p>Confirmas que queres remover a tua inscrição?</p>
+        <input id="leaveGameId" type="hidden" />
+        <p>Confirmar remoção da inscrição?</p>
       </div>
+
       <div class="modal-ft">
-        <button class="btn ghost" data-close>Cancelar</button>
-        <button id="confirmLeave" class="btn danger">Sair</button>
+        <button id="confirmLeave" class="btn danger">Confirmar</button>
       </div>
     </div>
   </template>
 
-  <!-- Lista rápida -->
+  <!-- LISTA RÁPIDA -->
   <template id="tpl-list">
-    <div class="modal wide">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Lista rápida">
       <div class="modal-hd">
         <h3>Lista Rápida</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
+
       <div class="modal-bd">
         <div id="listContent"></div>
       </div>
-      <div class="modal-ft">
+
+      <div class="modal-ft" style="gap:10px">
         <button id="btnPrintList" class="btn">🖨️ Imprimir</button>
         <button id="btnXlsList" class="btn">📗 Excel</button>
-        <button class="btn ghost" data-close>Fechar</button>
       </div>
     </div>
   </template>
 
-  <!-- Criar/Editar jogo -->
+  <!-- CRIAR/EDITAR JOGO -->
   <template id="tpl-upsert">
-    <div class="modal wide">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Criar/Editar jogo">
       <div class="modal-hd">
         <h3 id="upsertTitle">Criar Jogo</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
 
       <div class="modal-bd">
-        <input id="u_id" hidden />
+        <input id="u_id" type="hidden" />
+
+        <label class="lbl">Título</label>
+        <input id="u_title" class="inp" placeholder="Ex: STG CQB" />
+
+        <label class="lbl">Descrição</label>
+        <input id="u_desc" class="inp" placeholder="Ex: Treino CQB 9x9x9" />
 
         <div class="grid2">
           <div>
-            <label>Título</label>
-            <input id="u_title" placeholder="Ex: STG Night Ops" />
+            <label class="lbl">Data/Hora</label>
+            <input id="u_date" class="inp" type="datetime-local" />
           </div>
-
           <div>
-            <label>Campo</label>
-            <input id="u_field" placeholder="Ex: STG / ARCANJOS / TSL" />
+            <label class="lbl">Vagas</label>
+            <input id="u_total" class="inp" type="number" min="1" value="20" />
           </div>
+        </div>
 
+        <label class="lbl">Local</label>
+        <input id="u_loc" class="inp" placeholder="Braga, Portugal" />
+
+        <label class="lbl">Coordenadas (opcional) — “lat,lng”</label>
+        <input id="u_coords" class="inp" placeholder="41.545,-8.426" />
+
+        <label class="lbl">Imagem do header (opcional)</label>
+        <input id="u_img" class="inp" placeholder="URL (ou deixa vazio para camuflado)" />
+
+        <label class="lbl">Brasão (opcional)</label>
+        <input id="u_crest" class="inp" placeholder="URL do brasão do campo/equipa" />
+
+        <div class="grid2">
           <div>
-            <label>Data/hora</label>
-            <input id="u_date" type="datetime-local" />
+            <label class="lbl">Campo</label>
+            <input id="u_field" class="inp" placeholder="Ex: STG" />
           </div>
-
           <div>
-            <label>Total de vagas</label>
-            <input id="u_total" type="number" min="1" />
-          </div>
-
-          <div class="span2">
-            <label>Descrição</label>
-            <input id="u_desc" placeholder="Ex: Skirmish dominical" />
-          </div>
-
-          <div>
-            <label>Local (texto)</label>
-            <input id="u_loc" placeholder="Ex: Braga, Portugal" />
-          </div>
-
-          <div>
-            <label>Coords (lat,lng) opcional</label>
-            <input id="u_coords" placeholder="41.545,-8.426" />
-          </div>
-
-          <div class="span2">
-            <label>Imagem de fundo (URL) — opcional</label>
-            <input id="u_img" placeholder="https://..." />
-          </div>
-
-          <div class="span2">
-            <label>Brasão (URL) — opcional</label>
-            <input id="u_crest" placeholder="https://..." />
-          </div>
-
-          <div>
-            <label>Estado</label>
-            <select id="u_status">
+            <label class="lbl">Estado</label>
+            <select id="u_status" class="inp">
               <option value="open">Aberto</option>
               <option value="closed">Fechado</option>
             </select>
           </div>
+        </div>
 
-          <div class="row" style="align-items:center; gap:10px;">
-            <input id="u_pinned" type="checkbox" />
-            <label for="u_pinned" style="margin:0;">📌 Fixar no topo</label>
-          </div>
+        <div class="row" style="align-items:center; gap:10px; margin-top:10px">
+          <input id="u_pinned" type="checkbox" />
+          <label for="u_pinned">Fixar (📌)</label>
         </div>
       </div>
 
       <div class="modal-ft">
-        <button class="btn ghost" data-close>Cancelar</button>
         <button id="confirmUpsert" class="btn ok">Guardar</button>
       </div>
     </div>
   </template>
 
-  <!-- Moderadores -->
+  <!-- MODERADORES -->
   <template id="tpl-users">
-    <div class="modal wide">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Moderadores">
       <div class="modal-hd">
         <h3>Moderadores</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
+
       <div class="modal-bd">
         <div id="usersList" class="muted">A carregar…</div>
 
-        <hr style="margin:16px 0; opacity:.2;" />
+        <hr class="sep" />
 
         <h4>Criar moderador</h4>
-        <div class="grid2">
-          <div>
-            <label>Utilizador</label>
-            <input id="nu_user" placeholder="ex: mod_stg" />
-          </div>
-          <div>
-            <label>Senha</label>
-            <input id="nu_pass" placeholder="ex: mod2025" />
-          </div>
-          <div>
-            <label>Campo</label>
-            <input id="nu_field" placeholder="ex: STG" />
-          </div>
-          <div>
-            <label>Brasão do campo (URL)</label>
-            <input id="nu_crest" placeholder="https://..." />
-          </div>
-        </div>
+        <label class="lbl">Utilizador</label>
+        <input id="nu_user" class="inp" placeholder="ex: mod_stg" />
 
-        <button id="btnCreateUser" class="btn ok" style="margin-top:10px;">Criar</button>
+        <label class="lbl">Senha</label>
+        <input id="nu_pass" class="inp" placeholder="ex: mod2025" />
+
+        <label class="lbl">Campo (ex: STG)</label>
+        <input id="nu_field" class="inp" />
+
+        <label class="lbl">Brasão do campo (URL opcional)</label>
+        <input id="nu_crest" class="inp" />
       </div>
+
       <div class="modal-ft">
-        <button class="btn ghost" data-close>Fechar</button>
+        <button id="btnCreateUser" class="btn ok">Criar</button>
       </div>
     </div>
   </template>
 
-  <!-- Logs -->
+  <!-- LOGS -->
   <template id="tpl-logs">
-    <div class="modal wide">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Logs">
       <div class="modal-hd">
-        <h3>Logs de Auditoria</h3>
+        <h3>Logs</h3>
         <button class="btn ghost" data-close aria-label="Fechar">✖️</button>
       </div>
+
       <div class="modal-bd">
         <div id="logsContent" class="muted">A carregar…</div>
       </div>
-      <div class="modal-ft">
+
+      <div class="modal-ft" style="gap:10px">
         <button id="btnExportLogsCsv" class="btn">📤 CSV</button>
         <button id="btnExportLogsXls" class="btn">📗 Excel</button>
-        <button class="btn ghost" data-close>Fechar</button>
       </div>
     </div>
   </template>
