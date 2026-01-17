@@ -502,6 +502,28 @@ function openCreateGameModal() {
       <button class="btn ok" id="cgSave">Criar</button>
     `,
     onMount: () => {
+            // Limites de data (UI)
+      const dt = $("#cgDate");
+      if (dt) {
+        const pad = (n) => String(n).padStart(2, "0");
+        const toLocalInputValue = (d) =>
+          `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+        const now = new Date();
+        now.setSeconds(0, 0); // datetime-local não usa segundos
+
+        const max = new Date(now);
+        max.setMonth(max.getMonth() + 18); // +18 meses (ajusta se quiseres)
+
+        dt.min = toLocalInputValue(now);
+        dt.max = toLocalInputValue(max);
+
+        // Ajuda: pré-preencher com +7 dias à mesma hora
+        const def = new Date(now);
+        def.setDate(def.getDate() + 7);
+        dt.value = toLocalInputValue(def);
+      }
+
       $("#cgSave").addEventListener("click", () => {
         const title = ($("#cgTitle").value || "").trim();
         const field = ($("#cgField").value || "").trim();
@@ -513,6 +535,28 @@ function openCreateGameModal() {
 
         if (!title || !field || !date || !total || total < 1) {
           TOASTS.show("Preenche os campos obrigatórios (*).", "error");
+          return;
+        }
+        // Validação de data (real)
+        const selected = new Date(date);
+        if (Number.isNaN(selected.getTime())) {
+          TOASTS.show("Data inválida.", "error");
+          return;
+        }
+
+        const now = new Date();
+        now.setSeconds(0, 0);
+
+        const max = new Date(now);
+        max.setMonth(max.getMonth() + 18);
+
+        if (selected < now) {
+          TOASTS.show("Não é possível criar jogos no passado.", "error");
+          return;
+        }
+
+        if (selected > max) {
+          TOASTS.show("Data demasiado no futuro (máx. +18 meses).", "error");
           return;
         }
 
