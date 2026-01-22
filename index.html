@@ -1,59 +1,82 @@
 <!DOCTYPE html>
 <html lang="pt-PT">
 <head>
-  <meta charset="UTF-8" />
-  <title>GCAN — Gestão Campos Airsoft Norte</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#111618" />
-
-  <link rel="icon" type="image/png" href="assets/img/favicon/favicon-96x96.png" sizes="96x96" />
-  <link rel="shortcut icon" href="assets/img/favicon/favicon.ico" />
-  <link rel="apple-touch-icon" href="assets/img/favicon/apple-touch-icon.png" />
-
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCAN — Gestão Campos Airsoft Norte</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <strong>GCAN</strong>
-      <span>Gestão Campos Airsoft Norte</span>
-    </div>
 
-    <div class="top-actions">
-      <span id="sessionInfo" class="muted"></span>
-      <button id="btnCreate" class="btn" hidden>➕ Criar Jogo</button>
-      <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
-      <button id="btnLogs" class="btn" hidden>📜 Logs</button>
-      <button id="btnAdmin" class="btn ghost">⚙️ Admin</button>
-    </div>
-  </header>
+    <header class="navbar">
+        <div class="container">
+            <div class="brand">
+                <h1>GCAN</h1>
+                <p class="muted">Gestão Campos Airsoft Norte</p>
+            </div>
+            <div class="nav-right">
+                <span id="sessionInfo" class="muted"></span>
+                <div id="adminButtons">
+                    <button id="btnCreate" class="btn ok" hidden>+ Criar Jogo</button>
+                    <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
+                </div>
+                <button id="btnAdmin" class="btn icon-btn">⚙️ Admin</button>
+            </div>
+        </div>
+    </header>
 
-  <section class="hero">
-    <h1>🎯 Jogos de Airsoft — Norte</h1>
-    <p>Consulta jogos, vagas disponíveis e inscreve-te.</p>
-    <button id="ctaGo" class="btn ok">Ver Jogos</button>
-  </section>
+    <main class="container">
+        <section class="hero">
+            <h1>🎯 Jogos de Airsoft — Norte</h1>
+            <p>Consulta jogos, vagas disponíveis e inscreve-te.</p>
+            <button id="ctaGo" class="btn ok">Ver Jogos</button>
+        </section>
 
-  <section class="filters">
-    <input id="search" placeholder="Pesquisar jogo, campo, local…" />
-    <div id="filters" role="tablist">
-      <button class="chip active" data-filter="all" type="button">Todos</button>
-      <button class="chip" data-filter="open" type="button">Abertos</button>
-      <button class="chip" data-filter="lotado" type="button">Lotados</button>
-      <button class="chip" data-filter="pinned" type="button">📌 Fixados</button>
-    </div>
-  </section>
+        <section class="controls">
+            <input type="text" id="search" placeholder="Pesquisar jogo, campo, local...">
+            <div class="filters" id="filters">
+                <button class="chip active" data-filter="all">Todos</button>
+                <button class="chip" data-filter="open">Abertos</button>
+                <button class="chip" data-filter="pinned">📌 Fixados</button>
+            </div>
+        </section>
 
-  <main id="grid"></main>
+        <div class="grid" id="grid">
+            </div>
+    </main>
 
-  <footer class="footer">
-    <p><strong>Segurança:</strong> Óculos obrigatórios · Respeitar FPS · Fair-Play</p>
-    <p>GCAN © <span id="year"></span></p>
-  </footer>
+    <footer class="footer">
+        <p><strong>Segurança:</strong> Óculos obrigatórios · Respeitar FPS · Fair-Play</p>
+        <p>GCAN © <span id="year"></span></p>
+    </footer>
 
-  <div id="overlay" class="overlay" hidden></div>
-  <div class="toasts"></div>
-  <script src="app.js"></script>
+    <div id="overlay" class="overlay" hidden></div>
+    <div class="toasts"></div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAIJLAqrUzJiVJpEYgduSadMwp5iXjHRNM",
+        authDomain: "gcan-80aa7.firebaseapp.com",
+        databaseURL: "https://gcan-80aa7-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "gcan-80aa7",
+        storageBucket: "gcan-80aa7.firebasestorage.app",
+        messagingSenderId: "940824768444",
+        appId: "1:940824768444:web:f143917b90b1654f8b85b9"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      // Ferramentas globais para o app.js usar
+      window.db = db;
+      window.dbRef = ref;
+      window.dbSet = set;
+      window.dbOnValue = onValue;
+    </script>
+
+    <script src="app.js" defer></script>
 </body>
 </html>
