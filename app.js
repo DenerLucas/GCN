@@ -59,9 +59,14 @@ const safeStorage = (() => {
 })();
 
 // ===== Constantes =====
-const STORAGE_KEY = "gcan_games_v4";
-const USER_KEY = "gcan_public_user";
-const AUTH_KEY = "gcan_auth_v4"; // { role, username, name }
+const STORAGE_KEY='gcan_games_v3';
+const USER_KEY='gcan_public_user';
+const AUTH_ROLE_KEY='gcan_role';
+const AUTH_USER_KEY='gcan_user';
+
+// NOVO:
+const USERS_KEY='gcan_users_v1';
+
 
 // ===== Utilizador público (para inscrições) =====
 const PUBLIC_USER_ID = (() => {
@@ -127,18 +132,23 @@ const MockDB = {
       attendees: [],
       location: { text: "Braga" },
     },
-  ],
+  ],users:[
+    { id:'admin-1', role:'admin', name:'Admin', username:'admin', password:'airsoft2025', field:'GCAN' }
+  ]
 };
 
-function loadDB() {
-  try {
-    const s = safeStorage.getItem(STORAGE_KEY);
-    if (s) return JSON.parse(s);
-  } catch {}
+
+function loadDB(){
+  try{
+    const s=safeStorage.getItem(STORAGE_KEY);
+    if(s) return JSON.parse(s);
+  }catch{}
+
   safeStorage.setItem(STORAGE_KEY, JSON.stringify(MockDB));
   return JSON.parse(JSON.stringify(MockDB));
 }
-function saveDB(db) {
+
+function saveDB(db){
   safeStorage.setItem(STORAGE_KEY, JSON.stringify(db));
 }
 
@@ -289,10 +299,18 @@ function render() {
 }
 
 // ===== Actions =====
-function reload() {
-  const db = loadDB();
-  state.games = db.games || [];
-  render();
+function loadDB(){
+  try{
+    const s=safeStorage.getItem(STORAGE_KEY);
+    if(s) return JSON.parse(s);
+  }catch{}
+
+  safeStorage.setItem(STORAGE_KEY, JSON.stringify(MockDB));
+  return JSON.parse(JSON.stringify(MockDB));
+}
+
+function saveDB(db){
+  safeStorage.setItem(STORAGE_KEY, JSON.stringify(db));
 }
 
 async function copyLink(id) {
@@ -592,38 +610,162 @@ function openModeratorsModal() {
     return;
   }
 
+  const listHTML = () => {
+    const mods = (state.users || []).filter(u => u.role === "moderator");
+    if (!mods.length) return `<p class="muted">Ainda não existem moderadores.</p>`;
+
+    return `
+      <div class="list">
+        ${mods.map(m => `
+          <div class="list-item">
+            <div>
+              <strong>${escapeHtml(m.name || "-")}</strong>
+              <div class="muted small">
+                @${escapeHtml(m.username || "-")} • Campo/Equipa: ${escapeHtml(m.field || "-")}
+              </div>
+            </div>
+            <div class="admin-row">
+              <button class="btn danger" data-del-mod="${m.id}">Eliminar</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  };
+
   openModal({
     title: "Moderadores",
     contentHTML: `
-      <div class="muted" style="margin-bottom:10px">
-        (Protótipo) Nesta versão estática, isto é apenas uma prévia. No backend vai existir criação/remoção real.
-      </div>
-
       <div class="form">
         <div class="field">
-          <label>Novo moderador (email ou utilizador)</label>
-          <input id="modNew" type="text" placeholder="Ex: stg@campo.pt" />
+          <label>Nome *</label>
+          <input id="mName" type="text" placeholder="Ex: João Silva" />
         </div>
-      </div>
 
-      <div style="margin-top:14px" class="muted">
-        👉 Próximo passo (backend): guardar moderadores + limitar edição aos jogos do próprio moderador.
+        <div class="field">
+          <label>Utilizador (login) *</label>
+          <input id="mUser" type="text" placeholder="Ex: joao.stg" />
+        </div>
+
+        <div class="field">
+          <label>Senha *</label>
+          <div class="row" style="gap:8px">
+            <input id="mPass" type="text" placeholder="Definir senha..." style="flex:1" />
+            <button class="btn" id="mGen" type="button">Gerar</button>
+          </div>
+          <div class="muted small">Guarda esta senha e envia ao moderador.</div>
+        </div>
+
+        <div class="field">
+          <label>Campo / Equipa *</label>
+          <input id="mField" type="text" placeholder="Ex: STG / Arcanjos / TSL" />
+        </div>
+
+        <div class="admin-row">
+          <button class="btn ok" id="mAdd" type="button">Criar moderador</button>
+          <button class="btn" data-modal-close type="button">Fechar</button>
+        </div>
+
+        <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+
+        <h3 style="margin:0 0 10px 0">Lista de moderadores</h3>
+        <div id="modsList">${listHTML()}</div>
       </div>
     `,
-    footerHTML: `
-      <button class="btn" data-modal-close>Fechar</button>
-      <button class="btn ok" id="modAdd">Simular Adição</button>
-    `,
+    footerHTML: ``,
     onMount: () => {
-      $("#modAdd").addEventListener("click", () => {
-        const v = ($("#modNew").value || "").trim();
-        if (!v) return TOASTS.show("Escreve um utilizador/email.", "error");
-        TOASTS.show(`(Demo) Moderador adicionado: ${v}`);
-        $("#modNew").value = "";
+      const db = loadDB();
+
+      // garante state.users
+      state.users = db.users || state.users || [];
+
+      const renderList = () => {
+        $("#modsList").innerHTML = listHTML();
+      };
+
+      const genPass = () => {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        let out = "";
+        for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+        return out;
+      };
+
+      $("#mGen").addEventListener("click", () => {
+        $("#mPass").value = genPass();
       });
-    },
+
+      $("#mAdd").addEventListener("click", () => {
+        const name = ($("#mName").value || "").trim();
+        const username = ($("#mUser").value || "").trim().toLowerCase();
+        const password = ($("#mPass").value || "").trim();
+        const field = ($("#mField").value || "").trim();
+
+        if (!name || !username || !password || !field) {
+          TOASTS.show("Preenche todos os campos obrigatórios (*).", "error");
+          return;
+        }
+
+        // username único
+        const exists = state.users.some(u => (u.username || "").toLowerCase() === username);
+        if (exists) {
+          TOASTS.show("Esse utilizador já existe. Escolhe outro.", "error");
+          return;
+        }
+
+        const newMod = {
+          id: uid(),
+          role: "moderator",
+          name,
+          username,
+          password,   // protótipo (no backend vira hash)
+          field
+        };
+
+        state.users.push(newMod);
+
+        // guardar DB completo
+        db.users = state.users;
+        db.games = state.games;
+        saveDB(db);
+
+        TOASTS.show("Moderador criado ✅");
+        $("#mName").value = "";
+        $("#mUser").value = "";
+        $("#mPass").value = "";
+        $("#mField").value = "";
+
+        renderList();
+        syncTopbar?.(); // se existir na tua versão
+      });
+
+      // eliminar
+      document.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-del-mod]");
+        if (!b) return;
+
+        const id = b.getAttribute("data-del-mod");
+        state.users = state.users.filter(u => u.id !== id);
+
+        db.users = state.users;
+        db.games = state.games;
+        saveDB(db);
+
+        TOASTS.show("Moderador removido.");
+        renderList();
+        syncTopbar?.();
+      });
+    }
   });
 }
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
 
 // ===================== ADMIN: LOGS (DEMO) =====================
 function openLogsModal() {
