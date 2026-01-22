@@ -42,7 +42,6 @@ const TOASTS = {
 };
 
 const AUTH_KEY = 'gcan_auth_v1';
-const PLAYER_DATA_KEY = 'gcan_player_data';
 const safeStorage = (() => {
   try { localStorage.setItem("__t__", "1"); localStorage.removeItem("__t__"); return localStorage; }
   catch { return { getItem: () => null, setItem: () => {}, removeItem: () => {} }; }
@@ -60,16 +59,13 @@ function saveDB(data) { if (window.dbSet && window.dbRef && window.db) window.db
 function bindGlobalEvents() {
   const btnAdmin = $("#btnAdmin");
   if (btnAdmin) btnAdmin.onclick = openAdminLogin;
-
   const btnCreate = $("#btnCreate");
   if (btnCreate) btnCreate.onclick = () => openGameModal();
-
   const btnUsers = $("#btnUsers");
   if (btnUsers) btnUsers.onclick = () => {
     if (state.auth && state.auth.role === 'admin') openModsModal();
     else TOASTS.show("Acesso negado", "error");
   };
-  
   const searchInput = $("#search");
   if (searchInput) {
     searchInput.oninput = (e) => {
@@ -100,6 +96,7 @@ function calcStatus(g) { return remaining(g) <= 0 ? "lotado" : (g.status === "cl
 function cardHTML(g) {
   const st = calcStatus(g);
   const owner = state.users.find(u => u.id === g.ownerId);
+  // REGRA: Apenas dono ou admin vê os controles
   const isOwner = state.auth && (state.auth.id === g.ownerId || state.auth.role === 'admin');
   const crest = owner && owner.crest ? `<img src="${owner.crest}" alt="Logo">` : `<span>${(g.field || "?")[0]}</span>`;
   const shareMsg = encodeURIComponent(`🎯 Jogo: ${g.title}\n📅 ${fmtDate(g.date)}\nLink: ${window.location.href}`);
@@ -114,12 +111,11 @@ function cardHTML(g) {
       <div class="btn-row">
         <button class="btn ok" data-action="join" ${st === 'aberto' ? "" : "disabled"}>✅ Entrar</button>
         <button class="btn" data-action="list">📄 Lista</button>
-        ${owner && owner.location ? `<button class="btn" data-action="maps" data-loc="${owner.location}">📍</button>` : ""}
         <a href="https://wa.me/?text=${shareMsg}" target="_blank" class="btn">📱</a>
       </div>
       ${isOwner ? `<div class="btn-row admin-controls" style="border-top:1px solid #2a322c; padding-top:10px; margin-top:10px;">
         <button class="btn" data-action="edit">✏️</button><button class="btn" data-action="pin">${g.pinned ? '📍' : '📌'}</button>
-        <button class="btn" data-action="export">📥</button><button class="btn danger" data-action="delete">🗑️</button>
+        <button class="btn danger" data-action="delete">🗑️</button>
       </div>` : ""}
     </div>
   </article>`;
@@ -128,18 +124,22 @@ function cardHTML(g) {
 function render() {
   const grid = $("#grid"); if (!grid) return;
   let list = [...state.games];
-  if (state.filter === "mine") list = list.filter(g => g.ownerId === state.auth?.id);
-  else if (state.filter !== "all") {
+  
+  // FILTRO: "Meus" apenas filtra, "Todos" mostra tudo o que está na nuvem
+  if (state.filter === "mine") {
+    list = list.filter(g => g.ownerId === state.auth?.id);
+  } else if (state.filter !== "all") {
     if (state.filter === "open") list = list.filter(g => calcStatus(g) === "aberto");
     if (state.filter === "pinned") list = list.filter(g => g.pinned);
   }
+
   if (state.search) {
     const t = state.search.toLowerCase();
     list = list.filter(g => (g.title + (g.field || "")).toLowerCase().includes(t));
   }
   
   if (list.length === 0) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔭</div><h3>Nenhum jogo encontrado</h3><p class="muted">Tenta mudar os filtros.</p></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔭</div><h3>Nenhum jogo encontrado</h3></div>`;
   } else {
     list.sort((a, b) => (!!b.pinned - !!a.pinned) || new Date(a.date.replace(' ', 'T')) - new Date(b.date.replace(' ', 'T')));
     grid.innerHTML = list.map(cardHTML).join("");
@@ -169,8 +169,24 @@ function openGameModal(game = null) {
     onMount: () => {
       $("#gSave").onclick = () => {
         if (!$("#gT").value || !$("#gD").value) return TOASTS.show("Título e Data obrigatórios", "error");
-        if (isEdit) { game.title = $("#gT").value; game.total_slots = Number($("#gS").value); game.date = $("#gD").value; game.description = $("#gDesc").value; }
-        else { state.games.push({ id: uid(), ownerId: state.auth.id, field: state.auth.field, title: $("#gT").value, total_slots: Number($("#gS").value), date: $("#gD").value, description: $("#gDesc").value, attendees: [], pinned: false }); }
+        if (isEdit) { 
+          game.title = $("#gT").value; 
+          game.total_slots = Number($("#gS").value); 
+          game.date = $("#gD").value; 
+          game.description = $("#gDesc").value; 
+        } else { 
+          state.games.push({ 
+            id: uid(), 
+            ownerId: state.auth.id, 
+            field: state.auth.field || "GCN", 
+            title: $("#gT").value, 
+            total_slots: Number($("#gS").value), 
+            date: $("#gD").value, 
+            description: $("#gDesc").value, 
+            attendees: [], 
+            pinned: false 
+          }); 
+        }
         saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
       };
     }
@@ -194,7 +210,6 @@ function syncTopbar() {
   }
 }
 
-// LOGIN UNIFICADO: Aceita Admin e Moderadores
 function openAdminLogin() {
   openModal({
     title: "Acesso à Plataforma",
@@ -215,7 +230,6 @@ function openAdminLogin() {
   });
 }
 
-// LISTA DE MODERADORES ATUALIZADA
 function openModsModal() {
   const list = state.users.filter(u => u.role === 'moderator').map(m => `
     <li style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #2a322c; padding:4px 0;">
@@ -239,7 +253,8 @@ function openModsModal() {
       $("#mS").onclick = () => {
         if(!$("#mU").value || !$("#mP").value) return TOASTS.show("Obrigatórios", "error");
         state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, crest: $("#mC").value });
-        saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
+        saveDB({ games: state.games, users: state.users });
+        TOASTS.show("Utilizador criado!"); // Adicionado feedback imediato
       };
     }
   });
@@ -248,7 +263,8 @@ function openModsModal() {
 window.deleteMod = (id) => {
     if(confirm("Remover?")) {
         state.users = state.users.filter(u => u.id !== id);
-        saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
+        saveDB({ games: state.games, users: state.users });
+        TOASTS.show("Removido!");
     }
 };
 
@@ -261,8 +277,10 @@ document.addEventListener("click", (e) => {
   if (act === "join") openJoinModal(g);
   if (act === "list") openListModal(g);
   if (act === "edit") openGameModal(g);
-  if (act === "pin") { g.pinned = !g.pinned; saveDB({ games: state.games, users: state.users }); }
-  if (act === "delete" && confirm("Apagar jogo?")) { state.games = state.games.filter(x => x.id !== g.id); saveDB({ games: state.games, users: state.users }); }
+  if (act === "pin" && (state.auth.id === g.ownerId || state.auth.role === 'admin')) { g.pinned = !g.pinned; saveDB({ games: state.games, users: state.users }); }
+  if (act === "delete" && confirm("Apagar jogo?") && (state.auth.id === g.ownerId || state.auth.role === 'admin')) { 
+    state.games = state.games.filter(x => x.id !== g.id); saveDB({ games: state.games, users: state.users }); 
+  }
 });
 
 function openJoinModal(g) {
