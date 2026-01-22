@@ -61,12 +61,10 @@ const safeStorage = (() => {
 // ===== Constantes =====
 const STORAGE_KEY='gcan_games_v3';
 const USER_KEY='gcan_public_user';
+const AUTH_KEY='gcan_auth_v1';
 const AUTH_ROLE_KEY='gcan_role';
 const AUTH_USER_KEY='gcan_user';
-
-// NOVO:
 const USERS_KEY='gcan_users_v1';
-
 
 // ===== Utilizador público (para inscrições) =====
 const PUBLIC_USER_ID = (() => {
@@ -137,7 +135,6 @@ const MockDB = {
   ]
 };
 
-
 function loadDB(){
   try{
     const s=safeStorage.getItem(STORAGE_KEY);
@@ -155,9 +152,10 @@ function saveDB(db){
 // ===== State =====
 const state = {
   games: [],
+  users: [],
   filter: "all",
   search: "",
-  auth: getAuth(), // null ou {role,username,name}
+  auth: getAuth(),
 };
 
 // ===== Helpers =====
@@ -233,12 +231,12 @@ function cardHTML(g) {
 
     <div class="body">
       <div class="row">
-        <strong>${g.title}</strong>
+        <strong>${escapeHtml(g.title)}</strong>
         <div class="spacer"></div>
         <span class="muted">${fmtDate(g.date)}</span>
       </div>
 
-      <div class="muted">${g.description || ""}</div>
+      <div class="muted">${escapeHtml(g.description || "")}</div>
 
       <div class="muted">
         ${g.attendees.length}/${g.total_slots} inscritos • ${remaining(g)} vagas
@@ -299,20 +297,6 @@ function render() {
 }
 
 // ===== Actions =====
-function loadDB(){
-  try{
-    const s=safeStorage.getItem(STORAGE_KEY);
-    if(s) return JSON.parse(s);
-  }catch{}
-
-  safeStorage.setItem(STORAGE_KEY, JSON.stringify(MockDB));
-  return JSON.parse(JSON.stringify(MockDB));
-}
-
-function saveDB(db){
-  safeStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-}
-
 async function copyLink(id) {
   const url = location.href.split("#")[0] + `#game=${id}`;
   try {
@@ -411,7 +395,10 @@ function openJoinModal(game) {
           gdpr: gdpr,
         });
 
-        saveDB({ games: state.games });
+        const db = loadDB();
+        db.games = state.games;
+        db.users = state.users;
+        saveDB(db);
         closeModal();
         TOASTS.show("Inscrição efetuada ✅");
         render();
@@ -457,7 +444,6 @@ function openAdminModal() {
         closeModal();
         TOASTS.show(`Sessão iniciada: ${found.username} (${found.role})`);
 
-        // mostra botões de admin (se existirem no HTML)
         syncTopbar();
       });
     },
@@ -520,7 +506,6 @@ function openCreateGameModal() {
       <button class="btn ok" id="cgSave">Criar</button>
     `,
     onMount: () => {
-            // Limites de data (UI)
       const dt = $("#cgDate");
       if (dt) {
         const pad = (n) => String(n).padStart(2, "0");
@@ -528,15 +513,14 @@ function openCreateGameModal() {
           `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
         const now = new Date();
-        now.setSeconds(0, 0); // datetime-local não usa segundos
+        now.setSeconds(0, 0);
 
         const max = new Date(now);
-        max.setMonth(max.getMonth() + 18); // +18 meses (ajusta se quiseres)
+        max.setMonth(max.getMonth() + 18);
 
         dt.min = toLocalInputValue(now);
         dt.max = toLocalInputValue(max);
 
-        // Ajuda: pré-preencher com +7 dias à mesma hora
         const def = new Date(now);
         def.setDate(def.getDate() + 7);
         dt.value = toLocalInputValue(def);
@@ -555,7 +539,7 @@ function openCreateGameModal() {
           TOASTS.show("Preenche os campos obrigatórios (*).", "error");
           return;
         }
-        // Validação de data (real)
+
         const selected = new Date(date);
         if (Number.isNaN(selected.getTime())) {
           TOASTS.show("Data inválida.", "error");
@@ -582,7 +566,7 @@ function openCreateGameModal() {
           id: uid(),
           title,
           field,
-          date,                // datetime-local já vem em formato ISO local
+          date,
           description: desc,
           status: "open",
           pinned,
@@ -594,7 +578,10 @@ function openCreateGameModal() {
         };
 
         state.games.push(g);
-        saveDB({ games: state.games });
+        const db = loadDB();
+        db.games = state.games;
+        db.users = state.users;
+        saveDB(db);
         closeModal();
         TOASTS.show("Jogo criado ✅");
         render();
@@ -632,6 +619,8 @@ function openModeratorsModal() {
       </div>
     `;
   };
+
+  let modalListenerAdded = false;
 
   openModal({
     title: "Moderadores",
@@ -675,8 +664,6 @@ function openModeratorsModal() {
     footerHTML: ``,
     onMount: () => {
       const db = loadDB();
-
-      // garante state.users
       state.users = db.users || state.users || [];
 
       const renderList = () => {
@@ -705,7 +692,6 @@ function openModeratorsModal() {
           return;
         }
 
-        // username único
         const exists = state.users.some(u => (u.username || "").toLowerCase() === username);
         if (exists) {
           TOASTS.show("Esse utilizador já existe. Escolhe outro.", "error");
@@ -717,13 +703,11 @@ function openModeratorsModal() {
           role: "moderator",
           name,
           username,
-          password,   // protótipo (no backend vira hash)
+          password,
           field
         };
 
         state.users.push(newMod);
-
-        // guardar DB completo
         db.users = state.users;
         db.games = state.games;
         saveDB(db);
@@ -735,28 +719,33 @@ function openModeratorsModal() {
         $("#mField").value = "";
 
         renderList();
-        syncTopbar?.(); // se existir na tua versão
-      });
-
-      // eliminar
-      document.addEventListener("click", (e) => {
-        const b = e.target.closest("[data-del-mod]");
-        if (!b) return;
-
-        const id = b.getAttribute("data-del-mod");
-        state.users = state.users.filter(u => u.id !== id);
-
-        db.users = state.users;
-        db.games = state.games;
-        saveDB(db);
-
-        TOASTS.show("Moderador removido.");
-        renderList();
         syncTopbar?.();
       });
+
+      if (!modalListenerAdded) {
+        const handleModDelete = (e) => {
+          const b = e.target.closest("[data-del-mod]");
+          if (!b) return;
+
+          const id = b.getAttribute("data-del-mod");
+          state.users = state.users.filter(u => u.id !== id);
+
+          db.users = state.users;
+          db.games = state.games;
+          saveDB(db);
+
+          TOASTS.show("Moderador removido.");
+          renderList();
+          syncTopbar?.();
+        };
+
+        document.addEventListener("click", handleModDelete);
+        modalListenerAdded = true;
+      }
     }
   });
 }
+
 function escapeHtml(s){
   return String(s)
     .replaceAll("&","&amp;")
@@ -766,7 +755,6 @@ function escapeHtml(s){
     .replaceAll("'","&#039;");
 }
 
-
 // ===================== ADMIN: LOGS (DEMO) =====================
 function openLogsModal() {
   if (!state.auth || state.auth.role !== "admin") {
@@ -774,7 +762,6 @@ function openLogsModal() {
     return;
   }
 
-  // Versão estática: logs simples "fakes" só para UI
   const lines = [
     `[${new Date().toLocaleString("pt-PT")}] Admin abriu painel`,
     `[${new Date().toLocaleString("pt-PT")}] (Demo) Logs ainda não persistem sem backend`,
@@ -786,6 +773,7 @@ function openLogsModal() {
     footerHTML: `<button class="btn ok" data-modal-close>Fechar</button>`,
   });
 }
+
 function syncTopbar() {
   const info = $("#sessionInfo");
   const btnCreate = $("#btnCreate");
@@ -808,41 +796,44 @@ function syncTopbar() {
   if (btnLogs) btnLogs.hidden = state.auth.role !== "admin";
 }
 
+// ===== Init: Carregar dados do DB =====
+function reload() {
+  const db = loadDB();
+  state.games = db.games || [];
+  state.users = db.users || [];
+  render();
+}
+
 // ===== Eventos globais =====
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
 
-  // CTA
   if (btn.id === "ctaGo") {
     $("#grid")?.scrollIntoView({ behavior: "smooth" });
     return;
   }
 
-  // Admin
   if (btn.id === "btnAdmin") {
     openAdminModal();
     return;
   }
-    // Criar Jogo (admin)
+
   if (btn.id === "btnCreate") {
     openCreateGameModal();
     return;
   }
 
-  // Moderadores (admin)
   if (btn.id === "btnUsers") {
     openModeratorsModal();
     return;
   }
 
-  // Logs (admin)
   if (btn.id === "btnLogs") {
     openLogsModal();
     return;
   }
 
-  // chips
   if (btn.classList.contains("chip")) {
     $$(".chip").forEach((c) => c.classList.remove("active"));
     btn.classList.add("active");
@@ -851,7 +842,6 @@ document.addEventListener("click", (e) => {
     return;
   }
 
-  // ações dentro de cards
   const card = btn.closest(".card");
   if (!card) return;
 
@@ -867,14 +857,16 @@ document.addEventListener("click", (e) => {
   }
 
   if (action === "join") {
-    // abre modal (não inscreve automaticamente)
     openJoinModal(g);
     return;
   }
 
   if (action === "leave") {
     g.attendees = g.attendees.filter((a) => a.user_id !== PUBLIC_USER_ID);
-    saveDB({ games: state.games });
+    const db = loadDB();
+    db.games = state.games;
+    db.users = state.users;
+    saveDB(db);
     TOASTS.show("Inscrição removida");
     render();
     return;
