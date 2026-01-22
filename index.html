@@ -7,13 +7,13 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="navbar" style="position: relative; z-index: 1000;">
+    <header class="navbar" style="position: relative; z-index: 1000 !important;">
         <div class="container">
             <div class="brand">
                 <h1>GCAN</h1>
                 <p class="muted">Gestão Campos Airsoft Norte</p>
             </div>
-            <div class="nav-right" style="pointer-events: auto;">
+            <div class="nav-right" style="pointer-events: auto !important;">
                 <span id="sessionInfo" class="muted"></span>
                 <div id="adminButtons">
                     <button id="btnCreate" class="btn ok" hidden>+ Criar Jogo</button>
@@ -25,15 +25,15 @@
     </header>
 
     <main style="position: relative; z-index: 10;">
-        <section class="hero" style="pointer-events: none; margin-bottom: 30px;">
-            <div class="hero-content" style="pointer-events: auto;">
+        <section class="hero" style="pointer-events: none !important; position: relative; margin-bottom: 30px;">
+            <div class="hero-content" style="pointer-events: auto !important;">
                 <h1>🎯 Jogos de Airsoft — Norte</h1>
                 <p>Consulta jogos, vagas disponíveis e inscreve-te nos melhores campos.</p>
                 <button id="ctaGo" class="btn ok">Ver Jogos Disponíveis</button>
             </div>
         </section>
 
-        <section class="controls" style="position: relative; z-index: 20;">
+        <section class="controls" style="position: relative; z-index: 50 !important; pointer-events: auto !important;">
             <input type="text" id="search" placeholder="Pesquisar por jogo, campo ou localização...">
             <div id="filters" class="filter-row">
                 <button class="chip active" data-filter="all">Todos</button>
@@ -42,15 +42,16 @@
             </div>
         </section>
 
-        <div class="grid" id="grid" style="position: relative; z-index: 20;">
+        <div class="grid" id="grid" style="position: relative; z-index: 50 !important; pointer-events: auto !important;">
             </div>
     </main>
+
     <footer class="footer">
         <p><strong>Segurança:</strong> Óculos obrigatórios · Respeitar FPS · Fair-Play</p>
         <p>GCAN © <span id="year"></span></p>
     </footer>
 
-    <div id="overlay" class="overlay" hidden></div>
+    <div id="overlay" class="overlay" hidden style="pointer-events: auto;"></div>
     <div class="toasts"></div>
 
     <script type="module">
