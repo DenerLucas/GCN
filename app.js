@@ -283,16 +283,29 @@ function openModsModal() {
         <div class="field"><label>User</label><input id="mU" /></div>
         <div class="field"><label>Pass</label><input id="mP" /></div>
         <div class="field"><label>Campo</label><input id="mF" /></div>
-        <button class="btn ok" id="mS">Criar Moderador</button>
+        <div class="field"><label>URL Logo (Brasão)</label><input id="mC" placeholder="https://link-da-imagem.png" /></div>
+        
+        <button class="btn ok" id="mS">Criar Moderador GCN</button>
         <hr style="margin:15px 0; border:0; border-top:1px solid #2a322c;">
         <ul style="padding:0; list-style:none;">${list || '<li>Sem moderadores.</li>'}</ul>
       </div>`,
     onMount: () => {
       $("#mS").onclick = () => {
         if(!$("#mU").value || !$("#mP").value) return TOASTS.show("User e Pass obrigatórios", "error");
-        state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, location: '', crest: '' });
-        saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
-        TOASTS.show("Moderador criado!");
+        
+        state.users.push({ 
+          id: uid(), 
+          role: 'moderator', 
+          username: $("#mU").value, 
+          password: $("#mP").value, 
+          field: $("#mF").value, 
+          location: '', 
+          crest: $("#mC").value // Captura o URL da imagem
+        });
+        
+        saveDB({ games: state.games, users: state.users }); 
+        $("#overlay").hidden = true;
+        TOASTS.show("Moderador GCN criado com sucesso!");
       };
     }
   });
