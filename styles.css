@@ -178,10 +178,15 @@ main {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, .75);
-  display: grid;
+  display: none; /* Isso retira a "parede invisível" */
   place-items: center;
   z-index: 100;
   padding: 20px;
+}
+
+/* Esta regra faz o modal aparecer apenas quando o JS mandar */
+.overlay:not([hidden]) {
+  display: grid;
 }
 
 .modal {
