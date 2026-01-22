@@ -1,4 +1,4 @@
-// ===================== GCAN — VERSÃO ULTIMATE CLOUD =====================
+// ===================== GCAN — VERSÃO ULTIMATE CLOUD RESTAURADA =====================
 
 (function () {
   const y = document.getElementById("year");
@@ -23,14 +23,13 @@ function fmtDate(iso) {
       day: "2-digit", month: "2-digit", year: "numeric",
       hour: "2-digit", minute: "2-digit",
     });
-  } catch { return "Data inválida"; }
+  } catch { return "Data a definir"; }
 }
 
 function escapeHtml(s) {
   return String(s || "").replaceAll("&", "&").replaceAll("<", "<").replaceAll(">", ">").replaceAll('"', '"').replaceAll("'", "'");
 }
 
-// ===== Toasts =====
 const TOASTS = {
   el: $(".toasts"),
   show(msg, type = "ok", ms = 2600) {
@@ -43,7 +42,6 @@ const TOASTS = {
   },
 };
 
-// ===== Keys & Auth =====
 const AUTH_KEY = 'gcan_auth_v1';
 const USER_KEY = 'gcan_public_user';
 const PLAYER_DATA_KEY = 'gcan_player_data';
@@ -65,14 +63,20 @@ const PUBLIC_USER_ID = (() => {
   return id;
 })();
 
-const state = { games: [], users: [], filter: "all", search: "", auth: JSON.parse(safeStorage.getItem(AUTH_KEY) || 'null') };
+const state = { 
+    games: [], 
+    users: [], 
+    filter: "all", 
+    search: "", 
+    auth: JSON.parse(safeStorage.getItem(AUTH_KEY) || 'null') 
+};
 
 const MockDB = {
   games: [],
   users: [{ id: 'admin-1', role: 'admin', name: 'Admin Global', username: 'admin', password: 'airsoft2025', field: 'GCAN', crest: '', location: '' }]
 };
 
-// ===== Lógica de Sincronização Cloud (Firebase) =====
+// ===== SINCRONIZAÇÃO FIREBASE =====
 function saveDB(data) {
   if (window.dbSet && window.dbRef && window.db) {
     window.dbSet(window.dbRef(window.db, 'gcan_data'), data);
@@ -84,7 +88,6 @@ function init() {
     setTimeout(init, 500);
     return;
   }
-  // Escuta a nuvem em tempo real
   window.dbOnValue(window.dbRef(window.db, 'gcan_data'), (snapshot) => {
     const data = snapshot.val();
     if (data) {
@@ -98,7 +101,7 @@ function init() {
   });
 }
 
-// ===== Helpers de Jogo =====
+// ===== LÓGICA DE NEGÓCIO =====
 function remaining(g) { return g.total_slots - (g.attendees ? g.attendees.length : 0); }
 function calcStatus(g) {
   if (remaining(g) <= 0) return "lotado";
@@ -106,20 +109,7 @@ function calcStatus(g) {
 }
 function isJoined(g) { return (g.attendees || []).some((a) => a.user_id === PUBLIC_USER_ID); }
 
-// ===== UI: Modais e Render =====
-function openModal({ title, contentHTML, footerHTML, onMount }) {
-  const overlay = $("#overlay");
-  overlay.innerHTML = `
-    <div class="modal">
-      <div class="modal-head"><h3>${title}</h3><button class="icon-btn" id="btnClose">✕</button></div>
-      <div class="modal-body">${contentHTML}</div>
-      ${footerHTML ? `<div class="modal-foot">${footerHTML}</div>` : ""}
-    </div>`;
-  overlay.hidden = false;
-  $("#btnClose").onclick = () => overlay.hidden = true;
-  if (onMount) onMount();
-}
-
+// ===== RENDERIZAÇÃO ORIGINAL =====
 function cardHTML(g) {
   const st = calcStatus(g);
   const rem = remaining(g);
@@ -138,23 +128,23 @@ function cardHTML(g) {
       <div class="crest-lg">${crest}</div>
     </div>
     <div class="body">
-      <strong>${escapeHtml(g.title)}</strong>
-      <p class="muted">${fmtDate(g.date)}</p>
-      <p class="muted" style="${isCritical ? 'color:#b64b4b; font-weight:700;' : ''}">
-        ${(g.attendees || []).length}/${g.total_slots} inscritos ${isCritical ? '(ÚLTIMAS!)' : ''}
-      </p>
+      <div class="row"><strong>${escapeHtml(g.title)}</strong><div class="spacer"></div><span class="muted">${fmtDate(g.date)}</span></div>
+      <div class="muted">${escapeHtml(g.description || "")}</div>
+      <div class="muted" style="${isCritical ? 'color:#b64b4b; font-weight:700;' : ''}">
+        ${(g.attendees || []).length}/${g.total_slots} inscritos • ${rem} vagas ${isCritical ? '(ÚLTIMAS!)' : ''}
+      </div>
       <div class="btn-row">
         <button class="btn ok" data-action="join" ${st === 'aberto' && !isJoined(g) ? "" : "disabled"}>✅ Entrar</button>
         <button class="btn" data-action="list">📄 Lista</button>
-        ${owner && owner.location ? `<button class="btn" data-action="maps" data-loc="${owner.location}">📍</button>` : ""}
-        <a href="https://wa.me/?text=${shareMsg}" target="_blank" class="btn">📱</a>
+        ${owner && owner.location ? `<button class="btn" data-action="maps" data-loc="${owner.location}" title="Localização">📍</button>` : ""}
+        <a href="https://wa.me/?text=${shareMsg}" target="_blank" class="btn" title="Partilhar WhatsApp">📱</a>
       </div>
       ${isOwner ? `
-      <div class="btn-row admin-controls">
-        <button class="btn" data-action="edit">✏️</button>
-        <button class="btn" data-action="pin">${g.pinned ? '📍' : '📌'}</button>
-        <button class="btn" data-action="export">📥</button>
-        <button class="btn danger" data-action="delete">🗑️</button>
+      <div class="btn-row admin-controls" style="margin-top:10px; border-top:1px solid var(--border); padding-top:10px;">
+        <button class="btn" data-action="edit" title="Editar">✏️</button>
+        <button class="btn" data-action="pin" title="Fixar">${g.pinned ? '📍' : '📌'}</button>
+        <button class="btn" data-action="export" title="Exportar CSV">📥</button>
+        <button class="btn danger" data-action="delete" title="Apagar">🗑️</button>
       </div>` : ""}
     </div>
   </article>`;
@@ -163,23 +153,93 @@ function cardHTML(g) {
 function render() {
   const grid = $("#grid"); if (!grid) return;
   let list = [...state.games];
-  
   if (state.filter === "mine") list = list.filter(g => g.ownerId === state.auth?.id);
   else if (state.filter !== "all") {
     if (state.filter === "open") list = list.filter(g => calcStatus(g) === "aberto");
     if (state.filter === "pinned") list = list.filter(g => g.pinned);
   }
-  
   if (state.search) {
     const t = state.search.toLowerCase();
     list = list.filter(g => (g.title + g.field).toLowerCase().includes(t));
   }
-  
   list.sort((a, b) => (!!b.pinned - !!a.pinned) || new Date(a.date) - new Date(b.date));
-  grid.innerHTML = list.map(cardHTML).join("") || "<p class='muted'>Nenhum jogo encontrado.</p>";
+  grid.innerHTML = list.map(cardHTML).join("") || "<p class='muted' style='grid-column:1/-1; text-align:center;'>Nenhum jogo encontrado.</p>";
 }
 
-// ===== Funções Admin =====
+// ===== MODAIS E FORMULÁRIOS =====
+function openModal({ title, contentHTML, footerHTML, onMount }) {
+  const overlay = $("#overlay");
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-head"><h3>${title}</h3><button class="icon-btn" id="btnClose">✕</button></div>
+      <div class="modal-body">${contentHTML}</div>
+      ${footerHTML ? `<div class="modal-foot">${footerHTML}</div>` : ""}
+    </div>`;
+  overlay.hidden = false;
+  $("#btnClose").onclick = () => overlay.hidden = true;
+  if (onMount) onMount();
+}
+
+function openGameModal(game = null) {
+  const isEdit = !!game;
+  openModal({
+    title: isEdit ? "Editar Jogo" : "Criar Jogo",
+    contentHTML: `
+      <div class="form">
+        <div class="field"><label>Título</label><input id="gT" type="text" value="${isEdit ? game.title : ''}" /></div>
+        <div class="field"><label>Vagas Totais</label><input id="gS" type="number" value="${isEdit ? game.total_slots : '30'}" /></div>
+        <div class="field"><label>Data</label><input id="gD" type="datetime-local" value="${isEdit ? game.date : ''}" /></div>
+        <div class="field"><label>Descrição</label><textarea id="gDesc" style="width:100%; min-height:80px; background:var(--bg); color:#fff; border-radius:8px; padding:8px; border:1px solid var(--border);">${isEdit ? game.description : ''}</textarea></div>
+      </div>`,
+    footerHTML: `<button class="btn ok" id="gSave">${isEdit ? 'Atualizar Dados' : 'Publicar Jogo'}</button>`,
+    onMount: () => {
+      $("#gSave").onclick = () => {
+        if (!$("#gT").value || !$("#gD").value) return TOASTS.show("Título e Data obrigatórios", "error");
+        if (isEdit) {
+          game.title = $("#gT").value; game.total_slots = Number($("#gS").value);
+          game.date = $("#gD").value; game.description = $("#gDesc").value;
+        } else {
+          state.games.push({ id: uid(), ownerId: state.auth.id, field: state.auth.field, title: $("#gT").value, total_slots: Number($("#gS").value), date: $("#gD").value, description: $("#gDesc").value, attendees: [], pinned: false, status: "open" });
+        }
+        saveDB({ games: state.games, users: state.users });
+        $("#overlay").hidden = true; TOASTS.show("Dados Guardados!");
+      };
+    }
+  });
+}
+
+function openJoinModal(g) {
+  const saved = JSON.parse(safeStorage.getItem(PLAYER_DATA_KEY) || '{}');
+  openModal({
+    title: "Inscrição",
+    contentHTML: `
+      <div class="form">
+        <div class="field"><label>Nickname</label><input id="jN" value="${saved.nickname || ''}" /></div>
+        <div class="field"><label>Equipa</label><input id="jT" value="${saved.team || ''}" /></div>
+        <div class="field"><label>APD</label><input id="jA" value="${saved.apd || ''}" /></div>
+        <div class="chk"><input id="jG" type="checkbox" /><span>Aceito os termos GDPR</span></div>
+      </div>`,
+    footerHTML: `<button class="btn ok" id="jC">Confirmar</button>`,
+    onMount: () => {
+      $("#jC").onclick = () => {
+        if(!$("#jG").checked) return TOASTS.show("Aceite os termos", "error");
+        const p = { nickname: $("#jN").value, team: $("#jT").value, apd: $("#jA").value, user_id: PUBLIC_USER_ID };
+        safeStorage.setItem(PLAYER_DATA_KEY, JSON.stringify(p));
+        if (!g.attendees) g.attendees = [];
+        g.attendees.push(p); saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true; TOASTS.show("Inscrito!");
+      };
+    }
+  });
+}
+
+function openListModal(g) {
+  const isPriv = state.auth && (state.auth.id === g.ownerId || state.auth.role === 'admin');
+  const header = isPriv ? `<tr><th>Nick</th><th>Equipa</th><th>APD</th></tr>` : `<tr><th>Nickname</th></tr>`;
+  const rows = (g.attendees || []).map(a => `<tr><td>${escapeHtml(a.nickname)}</td>${isPriv ? `<td>${escapeHtml(a.team)}</td><td>${escapeHtml(a.apd)}</td>` : ''}</tr>`).join("");
+  openModal({ title: "Inscritos", contentHTML: `<table class="table" style="width:100%"><thead>${header}</thead><tbody>${rows || '<tr><td>Vazio</td></tr>'}</tbody></table>` });
+}
+
+// ===== EVENTOS E SESSÃO =====
 function syncTopbar() {
   const info = $("#sessionInfo"); if (!info) return;
   if (!state.auth) {
@@ -187,7 +247,7 @@ function syncTopbar() {
     $$("#btnCreate, #btnUsers").forEach(b => b.hidden = true);
     $("#filterMine")?.remove();
   } else {
-    info.innerHTML = `${state.auth.username} <button class="btn ghost" id="btnLogout" style="font-size:10px">Sair</button>`;
+    info.innerHTML = `${state.auth.username} (${state.auth.field}) <button class="btn ghost" id="btnLogout" style="font-size:10px; margin-left:5px;">Sair</button>`;
     $("#btnLogout").onclick = () => { safeStorage.removeItem(AUTH_KEY); location.reload(); };
     $("#btnCreate").hidden = false;
     $("#btnUsers").hidden = state.auth.role !== 'admin';
@@ -198,35 +258,8 @@ function syncTopbar() {
   }
 }
 
-function openGameModal(game = null) {
-  const isEdit = !!game;
-  openModal({
-    title: isEdit ? "Editar Jogo" : "Criar Jogo",
-    contentHTML: `
-      <div class="form">
-        <div class="field"><label>Título</label><input id="gT" type="text" value="${isEdit ? game.title : ''}" /></div>
-        <div class="field"><label>Vagas</label><input id="gS" type="number" value="${isEdit ? game.total_slots : '30'}" /></div>
-        <div class="field"><label>Data</label><input id="gD" type="datetime-local" value="${isEdit ? game.date : ''}" /></div>
-      </div>`,
-    footerHTML: `<button class="btn ok" id="gSave">Confirmar</button>`,
-    onMount: () => {
-      $("#gSave").onclick = () => {
-        if (isEdit) {
-          game.title = $("#gT").value; game.total_slots = Number($("#gS").value); game.date = $("#gD").value;
-        } else {
-          state.games.push({ id: uid(), ownerId: state.auth.id, field: state.auth.field, title: $("#gT").value, total_slots: Number($("#gS").value), date: $("#gD").value, attendees: [], pinned: false });
-        }
-        saveDB({ games: state.games, users: state.users });
-        $("#overlay").hidden = true;
-      };
-    }
-  });
-}
-
-// ===== Eventos Globais =====
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button"); if (!btn) return;
-  
   if (btn.id === "btnAdmin") return openAdminLogin();
   if (btn.id === "btnCreate") return openGameModal();
   if (btn.id === "btnUsers") return openModsModal();
@@ -234,47 +267,21 @@ document.addEventListener("click", (e) => {
     $$(".chip").forEach(c => c.classList.remove("active"));
     btn.classList.add("active"); state.filter = btn.dataset.filter; render(); return;
   }
-
   const card = btn.closest(".card"); if (!card) return;
   const g = state.games.find(x => x.id === card.dataset.id);
   const act = btn.dataset.action;
-
   if (act === "join") openJoinModal(g);
   if (act === "list") openListModal(g);
   if (act === "maps") window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(btn.dataset.loc)}`, '_blank');
   if (act === "edit") openGameModal(g);
   if (act === "pin") { g.pinned = !g.pinned; saveDB({ games: state.games, users: state.users }); }
   if (act === "export") exportCSV(g);
-  if (act === "delete" && confirm("Apagar jogo?")) { state.games = state.games.filter(x => x.id !== g.id); saveDB({ games: state.games, users: state.users }); }
+  if (act === "delete" && confirm("Apagar jogo permanentemente?")) { state.games = state.games.filter(x => x.id !== g.id); saveDB({ games: state.games, users: state.users }); }
 });
-
-// ===== Funções Auxiliares =====
-function openJoinModal(g) {
-  const saved = JSON.parse(safeStorage.getItem(PLAYER_DATA_KEY) || '{}');
-  openModal({
-    title: "Inscrição",
-    contentHTML: `<div class="form"><div class="field"><label>Nick</label><input id="jN" value="${saved.nickname || ''}" /></div><div class="field"><label>Equipa</label><input id="jT" value="${saved.team || ''}" /></div><div class="field"><label>APD</label><input id="jA" value="${saved.apd || ''}" /></div></div>`,
-    footerHTML: `<button class="btn ok" id="jC">Confirmar</button>`,
-    onMount: () => {
-      $("#jC").onclick = () => {
-        const p = { nickname: $("#jN").value, team: $("#jT").value, apd: $("#jA").value, user_id: PUBLIC_USER_ID };
-        safeStorage.setItem(PLAYER_DATA_KEY, JSON.stringify(p));
-        if (!g.attendees) g.attendees = [];
-        g.attendees.push(p); saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
-      };
-    }
-  });
-}
-
-function openListModal(g) {
-  const isPriv = state.auth && (state.auth.id === g.ownerId || state.auth.role === 'admin');
-  const rows = (g.attendees || []).map(a => `<tr><td>${escapeHtml(a.nickname)}</td>${isPriv ? `<td>${escapeHtml(a.team)}</td><td>${escapeHtml(a.apd)}</td>` : ''}</tr>`).join("");
-  openModal({ title: "Lista", contentHTML: `<table class="table" style="width:100%"><thead><tr><th>Nick</th>${isPriv ? '<th>Equipa</th><th>APD</th>' : ''}</tr></thead><tbody>${rows || '<tr><td>Vazio</td></tr>'}</tbody></table>` });
-}
 
 function openAdminLogin() {
   openModal({
-    title: "Login",
+    title: "Acesso Restrito",
     contentHTML: `<div class="form"><div class="field"><label>User</label><input id="aU" /></div><div class="field"><label>Pass</label><input id="aP" type="password" /></div></div>`,
     footerHTML: `<button class="btn ok" id="aL">Entrar</button>`,
     onMount: () => {
@@ -287,14 +294,25 @@ function openAdminLogin() {
 }
 
 function openModsModal() {
-  const list = state.users.filter(u => u.role === 'moderator').map(m => `<li>${m.username} (${m.field}) <button onclick="delMod('${m.id}')">X</button></li>`).join("");
+  const list = state.users.filter(u => u.role === 'moderator').map(m => `
+    <div style="padding:10px; border-bottom:1px solid var(--border)">
+      <strong>${m.username}</strong> (${m.field}) <button onclick="delMod('${m.id}')" class="btn danger" style="float:right; padding:2px 8px">X</button>
+    </div>`).join("");
   openModal({
-    title: "Moderadores",
-    contentHTML: `<div class="form"><div class="field"><label>User</label><input id="mU" /></div><div class="field"><label>Pass</label><input id="mP" /></div><div class="field"><label>Campo</label><input id="mF" /></div><div class="field"><label>Localização</label><input id="mL" /></div><button class="btn ok" id="mS">Criar</button><hr><ul>${list}</ul></div>`,
+    title: "Gestão de Moderadores",
+    contentHTML: `
+      <div class="form">
+        <div class="field"><label>User</label><input id="mU" /></div>
+        <div class="field"><label>Pass</label><input id="mP" /></div>
+        <div class="field"><label>Campo</label><input id="mF" /></div>
+        <div class="field"><label>Maps/Morada</label><input id="mL" /></div>
+        <div class="field"><label>URL Logo</label><input id="mC" /></div>
+        <button class="btn ok" id="mS">Criar Moderador</button><hr>${list}
+      </div>`,
     onMount: () => {
       $("#mS").onclick = () => {
-        state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, location: $("#mL").value, crest: '' });
-        saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
+        state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, location: $("#mL").value, crest: $("#mC").value });
+        saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true; TOASTS.show("Moderador Criado!");
       };
     }
   });
