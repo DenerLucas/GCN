@@ -1,4 +1,4 @@
-// ===================== GCAN — SISTEMA ULTIMATE (GESTÃO + UX + VIRAL) =====================
+// ===================== GCAN — VERSÃO FINAL LOCAL =====================
 
 (function () {
   const y = document.getElementById("year");
@@ -15,7 +15,6 @@ function uid() {
   });
 }
 
-// CORREÇÃO: Função de data robusta (Evita "Invalid Date")
 function fmtDate(iso) {
   try {
     if (!iso) return "Data a definir";
@@ -44,11 +43,11 @@ const TOASTS = {
   },
 };
 
-// ===== Storage =====
+// ===== Storage Keys =====
 const STORAGE_KEY = 'gcan_games_v3';
 const AUTH_KEY = 'gcan_auth_v1';
 const USER_KEY = 'gcan_public_user';
-const PLAYER_DATA_KEY = 'gcan_player_data'; // UX: Lembrar jogador
+const PLAYER_DATA_KEY = 'gcan_player_data';
 
 const safeStorage = (() => {
   try {
@@ -72,8 +71,9 @@ function getAuth() {
   return raw ? JSON.parse(raw) : null;
 }
 function setAuth(a) { safeStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
+function clearAuth() { safeStorage.removeItem(AUTH_KEY); }
 
-// ===== DB Logic =====
+// ===== State & DB (Provisório no LocalStorage) =====
 const MockDB = {
   games: [],
   users: [
@@ -112,7 +112,7 @@ function openModal({ title, contentHTML, footerHTML, onMount }) {
 }
 function closeModal() { $("#overlay").hidden = true; }
 
-// ===== Renderização com Novas UX (Vagas Críticas e Partilha) =====
+// ===== Renderização com Gestão e UX =====
 function cardHTML(g) {
   const st = calcStatus(g);
   const canJoin = st === "aberto" && !isJoined(g);
@@ -121,11 +121,10 @@ function cardHTML(g) {
   const crest = crestImg ? `<img src="${crestImg}" alt="Campo">` : `<span>${(g.field || "?")[0]}</span>`;
   
   const rem = remaining(g);
-  const isCritical = st === "aberto" && rem > 0 && rem < 5; // UX: Vagas Críticas
+  const isCritical = st === "aberto" && rem > 0 && rem < 5;
   const isOwner = state.auth && (state.auth.id === g.ownerId || state.auth.role === 'admin');
 
-  // Link Viral WhatsApp
-  const shareMsg = encodeURIComponent(`🎯 Inscrições para: ${g.title}\n📅 Data: ${fmtDate(g.date)}\n📍 Campo: ${g.field}\nInscreve-te aqui: ${window.location.href}`);
+  const shareMsg = encodeURIComponent(`🎯 Inscrições: ${g.title}\n📅 Data: ${fmtDate(g.date)}\n📍 Campo: ${g.field}\nLink: ${window.location.href}`);
   const waUrl = `https://wa.me/?text=${shareMsg}`;
 
   return `
@@ -138,22 +137,22 @@ function cardHTML(g) {
     <div class="body">
       <div class="row"><strong>${escapeHtml(g.title)}</strong><div class="spacer"></div><span class="muted">${fmtDate(g.date)}</span></div>
       <div class="muted">${escapeHtml(g.description || "")}</div>
-      <div class="muted ${isCritical ? 'critical-spots' : ''}" style="${isCritical ? 'color:var(--danger); font-weight:700;' : ''}">
+      <div class="muted" style="${isCritical ? 'color:#b64b4b; font-weight:700;' : ''}">
         ${g.attendees.length}/${g.total_slots} inscritos • ${rem} vagas ${isCritical ? '(ÚLTIMAS!)' : ''}
       </div>
       
       <div class="btn-row">
         <button class="btn ok" data-action="join" ${canJoin ? "" : "disabled"}>✅ Entrar</button>
         <button class="btn" data-action="list">📄 Lista</button>
-        ${owner && owner.location ? `<button class="btn" data-action="maps" data-loc="${owner.location}" title="Google Maps">📍</button>` : ""}
-        <a href="${waUrl}" target="_blank" class="btn" style="text-decoration:none;" title="Partilhar WhatsApp">📱</a>
+        ${owner && owner.location ? `<button class="btn" data-action="maps" data-loc="${owner.location}">📍</button>` : ""}
+        <a href="${waUrl}" target="_blank" class="btn" style="text-decoration:none;">📱</a>
       </div>
 
       ${isOwner ? `
-      <div class="btn-row admin-controls">
-        <button class="btn" data-action="edit">✏️ Editar</button>
-        <button class="btn" data-action="pin">${g.pinned ? '📍 Soltar' : '📌 Fixar'}</button>
-        <button class="btn" data-action="export">📥 CSV</button>
+      <div class="btn-row admin-controls" style="margin-top:10px; border-top:1px solid var(--border); padding-top:10px;">
+        <button class="btn" data-action="edit">✏️</button>
+        <button class="btn" data-action="pin">${g.pinned ? '📍' : '📌'}</button>
+        <button class="btn" data-action="export">📥</button>
         <button class="btn danger" data-action="delete">🗑️</button>
       </div>` : ""}
     </div>
@@ -165,7 +164,6 @@ function render() {
   if (!grid) return;
   let list = [...state.games];
 
-  // Filtros Avançados
   if (state.filter === "mine" && state.auth) {
     list = list.filter(g => g.ownerId === state.auth.id);
   } else if (state.filter !== "all") {
@@ -185,7 +183,46 @@ function render() {
   grid.innerHTML = list.length ? list.map(cardHTML).join("") : "<p class='muted' style='grid-column:1/-1; text-align:center;'>Nenhum jogo encontrado.</p>";
 }
 
-// ===== Gestão de Jogos (Editar / Criar) =====
+// ===== Funções de Sessão =====
+function syncTopbar() {
+  const info = $("#sessionInfo");
+  if (!info) return;
+
+  if (!state.auth) {
+    info.innerHTML = "";
+    $$("#btnCreate, #btnUsers, #btnLogs").forEach(b => b && (b.hidden = true));
+    if ($("#filterMine")) $("#filterMine").remove();
+  } else {
+    info.innerHTML = `
+      ${state.auth.username} (${state.auth.field}) 
+      <button class="btn ghost" id="btnLogout" style="padding:2px 8px; margin-left:8px; font-size:11px;">🚪 Sair</button>
+    `;
+    $("#btnLogout").onclick = logout;
+
+    const isAdmin = state.auth.role === 'admin';
+    $("#btnCreate").hidden = false;
+    if($("#btnUsers")) $("#btnUsers").hidden = !isAdmin;
+    
+    if (!$("#filterMine")) {
+      const chipMine = document.createElement("button");
+      chipMine.id = "filterMine";
+      chipMine.className = "chip";
+      chipMine.dataset.filter = "mine";
+      chipMine.textContent = "👤 Meus Jogos";
+      $("#filters")?.appendChild(chipMine);
+    }
+  }
+}
+
+function logout() {
+  clearAuth();
+  state.auth = null;
+  syncTopbar();
+  render();
+  TOASTS.show("Sessão encerrada.");
+}
+
+// ===== Modais de Gestão =====
 function openGameModal(game = null) {
   const isEdit = !!game;
   openModal({
@@ -193,14 +230,14 @@ function openGameModal(game = null) {
     contentHTML: `
       <div class="form">
         <div class="field"><label>Título</label><input id="gTitle" type="text" value="${isEdit ? game.title : ''}" /></div>
-        <div class="field"><label>Vagas Totais</label><input id="gSlots" type="number" value="${isEdit ? game.total_slots : '30'}" /></div>
+        <div class="field"><label>Vagas</label><input id="gSlots" type="number" value="${isEdit ? game.total_slots : '30'}" /></div>
         <div class="field"><label>Data</label><input id="gDate" type="datetime-local" value="${isEdit ? game.date : ''}" /></div>
-        <div class="field"><label>Descrição</label><textarea id="gDesc" style="width:100%; min-height:80px; background:var(--bg); color:#fff; border-radius:8px; padding:8px; border:1px solid var(--border);">${isEdit ? game.description : ''}</textarea></div>
+        <div class="field"><label>Descrição</label><textarea id="gDesc" style="width:100%; min-height:60px; background:#0b0e0c; color:#fff; border:1px solid #2a322c; border-radius:8px; padding:8px;">${isEdit ? game.description : ''}</textarea></div>
       </div>`,
-    footerHTML: `<button class="btn ok" id="gSave">${isEdit ? 'Atualizar Jogo' : 'Publicar Jogo'}</button>`,
+    footerHTML: `<button class="btn ok" id="gSave">Confirmar</button>`,
     onMount: () => {
       $("#gSave").onclick = () => {
-        if (!$("#gTitle").value || !$("#gDate").value) return TOASTS.show("Título e Data obrigatórios", "error");
+        if (!$("#gTitle").value || !$("#gDate").value) return TOASTS.show("Preencha Título e Data", "error");
         if (isEdit) {
           game.title = $("#gTitle").value; game.total_slots = Number($("#gSlots").value);
           game.date = $("#gDate").value; game.description = $("#gDesc").value;
@@ -212,38 +249,7 @@ function openGameModal(game = null) {
           });
         }
         saveDB({ games: state.games, users: state.users });
-        render(); closeModal(); TOASTS.show("Dados Guardados!");
-      };
-    }
-  });
-}
-
-// ===== Inscrição (UX: Auto-preenchimento) =====
-function openJoinModal(game) {
-  // Recupera dados salvos anteriormente
-  const saved = JSON.parse(safeStorage.getItem(PLAYER_DATA_KEY) || '{}');
-
-  openModal({
-    title: "Inscrição - " + game.title,
-    contentHTML: `
-      <div class="form">
-        <div class="field"><label>Nickname</label><input id="jN" type="text" value="${saved.nickname || ''}" /></div>
-        <div class="field"><label>Equipa</label><input id="jT" type="text" value="${saved.team || ''}" /></div>
-        <div class="field"><label>APD</label><input id="jA" type="text" value="${saved.apd || ''}" /></div>
-        <div class="chk"><input id="jG" type="checkbox" /><span>Concordo com os termos GDPR</span></div>
-      </div>`,
-    footerHTML: `<button class="btn ok" id="jConfirm">Confirmar</button>`,
-    onMount: () => {
-      $("#jConfirm").onclick = () => {
-        if(!$("#jG").checked) return TOASTS.show("Aceite os termos", "error");
-        const pData = { nickname: $("#jN").value, team: $("#jT").value, apd: $("#jA").value };
-        
-        // UX: Guarda para a próxima vez
-        safeStorage.setItem(PLAYER_DATA_KEY, JSON.stringify(pData));
-        
-        game.attendees.push({ user_id: PUBLIC_USER_ID, ...pData });
-        saveDB({ games: state.games, users: state.users });
-        render(); closeModal(); TOASTS.show("Inscrito com sucesso!");
+        render(); closeModal();
       };
     }
   });
@@ -258,7 +264,6 @@ document.addEventListener("click", (e) => {
   if (btn.id === "btnCreate") return openGameModal();
   if (btn.id === "btnUsers") return openModeratorsModal();
 
-  // Filtros Chips
   if (btn.classList.contains("chip")) {
     $$(".chip").forEach(c => c.classList.remove("active"));
     btn.classList.add("active");
@@ -276,28 +281,16 @@ document.addEventListener("click", (e) => {
   if (action === "maps") window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(btn.dataset.loc)}`, '_blank');
   if (action === "edit") openGameModal(g);
   if (action === "pin") { g.pinned = !g.pinned; saveDB({ games: state.games, users: state.users }); render(); }
-  if (action === "delete" && confirm("Apagar jogo permanentemente?")) { state.games = state.games.filter(x => x.id !== g.id); saveDB({ games: state.games, users: state.users }); render(); }
-  if (action === "export") exportToCSV(g);
+  if (action === "delete" && confirm("Apagar jogo?")) { state.games = state.games.filter(x => x.id !== g.id); saveDB({ games: state.games, users: state.users }); render(); }
   if (action === "leave") { g.attendees = g.attendees.filter(a => a.user_id !== PUBLIC_USER_ID); saveDB({ games: state.games, users: state.users }); render(); }
 });
 
-// ===== Funções de Apoio (Moderadores, CSV, Sync) =====
-function exportToCSV(game) {
-  const headers = ["Nickname", "Equipa", "APD"];
-  const rows = game.attendees.map(a => [a.nickname, a.team, a.apd]);
-  const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `lista_${game.title}.csv`; link.click();
-}
-
+// ===== Funções de Suporte (Moderadores, CSV, Inscrição) =====
 function openModeratorsModal() {
   const mods = state.users.filter(u => u.role === 'moderator');
   const listHTML = mods.map(m => `
-    <div style="padding:10px; border-bottom:1px solid var(--border)">
-      <strong>${m.username}</strong> (${m.field})<br><small class="muted">${m.location || 'Sem morada'}</small>
-      <button class="btn danger" onclick="deleteUser('${m.id}')" style="float:right">X</button>
+    <div style="padding:10px; border-bottom:1px solid #2a322c">
+      <strong>${m.username}</strong> (${m.field}) <button class="btn danger" onclick="deleteUser('${m.id}')" style="float:right">X</button>
     </div>`).join("");
 
   openModal({
@@ -307,23 +300,42 @@ function openModeratorsModal() {
         <div class="field"><label>User</label><input id="mU" type="text" /></div>
         <div class="field"><label>Pass</label><input id="mP" type="text" /></div>
         <div class="field"><label>Campo</label><input id="mF" type="text" /></div>
-        <div class="field"><label>Google Maps</label><input id="mL" type="text" /></div>
+        <div class="field"><label>Localização</label><input id="mL" type="text" /></div>
         <div class="field"><label>URL Logo</label><input id="mC" type="text" /></div>
-        <button class="btn ok" id="mS">Criar</button>
-        <hr style="margin:15px 0; border-top:1px solid var(--border)">
-        ${listHTML}
+        <button class="btn ok" id="mS">Criar</button><hr style="margin:15px 0; border-top:1px solid #2a322c">${listHTML}
       </div>`,
     onMount: () => { $("#mS").onclick = () => {
       state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, crest: $("#mC").value, location: $("#mL").value });
-      saveDB({ games: state.games, users: state.users }); closeModal(); TOASTS.show("Moderador Criado!");
+      saveDB({ games: state.games, users: state.users }); closeModal();
     };}
   });
 }
 
+function openJoinModal(game) {
+  const saved = JSON.parse(safeStorage.getItem(PLAYER_DATA_KEY) || '{}');
+  openModal({
+    title: "Inscrição",
+    contentHTML: `
+      <div class="form">
+        <div class="field"><label>Nickname</label><input id="jN" type="text" value="${saved.nickname || ''}" /></div>
+        <div class="field"><label>Equipa</label><input id="jT" type="text" value="${saved.team || ''}" /></div>
+        <div class="field"><label>APD</label><input id="jA" type="text" value="${saved.apd || ''}" /></div>
+      </div>`,
+    footerHTML: `<button class="btn ok" id="jC">Confirmar</button>`,
+    onMount: () => { $("#jC").onclick = () => {
+      const pData = { nickname: $("#jN").value, team: $("#jT").value, apd: $("#jA").value };
+      safeStorage.setItem(PLAYER_DATA_KEY, JSON.stringify(pData));
+      game.attendees.push({ user_id: PUBLIC_USER_ID, ...pData });
+      saveDB({ games: state.games, users: state.users });
+      render(); closeModal();
+    }; }
+  });
+}
+
 function openListModal(game) {
-  const isPrivileged = state.auth && (state.auth.id === game.ownerId || state.auth.role === 'admin');
-  const header = isPrivileged ? `<tr><th>Nick</th><th>Equipa</th><th>APD</th></tr>` : `<tr><th>Nickname</th></tr>`;
-  const rows = game.attendees.map(a => isPrivileged 
+  const isOwner = state.auth && (state.auth.id === game.ownerId || state.auth.role === 'admin');
+  const header = isOwner ? `<tr><th>Nick</th><th>Equipa</th><th>APD</th></tr>` : `<tr><th>Nickname</th></tr>`;
+  const rows = game.attendees.map(a => isOwner 
     ? `<tr><td>${escapeHtml(a.nickname)}</td><td>${escapeHtml(a.team)}</td><td>${escapeHtml(a.apd)}</td></tr>`
     : `<tr><td>${escapeHtml(a.nickname)}</td></tr>`).join("");
   openModal({ title: "Inscritos", contentHTML: `<table class="table" style="width:100%"><thead>${header}</thead><tbody>${rows || '<tr><td>Vazio</td></tr>'}</tbody></table>` });
@@ -331,32 +343,14 @@ function openListModal(game) {
 
 function openAdminModal() {
   openModal({
-    title: "Acesso Restrito",
+    title: "Login",
     contentHTML: `<div class="form"><div class="field"><label>User</label><input id="admU" type="text" /></div><div class="field"><label>Pass</label><input id="admP" type="password" /></div></div>`,
     footerHTML: `<button class="btn ok" id="admL">Entrar</button>`,
     onMount: () => { $("#admL").onclick = () => {
       const u = state.users.find(x => x.username === $("#admU").value && x.password === $("#admP").value);
-      if (u) { state.auth = u; setAuth(u); syncTopbar(); closeModal(); render(); } else TOASTS.show("Credenciais Erradas", "error");
+      if (u) { state.auth = u; setAuth(u); syncTopbar(); closeModal(); render(); } else TOASTS.show("Erro", "error");
     };}
   });
-}
-
-function syncTopbar() {
-  const info = $("#sessionInfo");
-  if (!info || !state.auth) return;
-  info.textContent = `${state.auth.username} (${state.auth.field})`;
-  $("#btnCreate").hidden = false;
-  $("#btnUsers").hidden = state.auth.role !== 'admin';
-
-  // UX: Adiciona filtro "Meus Jogos" se houver login
-  if (!$("#filterMine")) {
-    const chipMine = document.createElement("button");
-    chipMine.id = "filterMine";
-    chipMine.className = "chip";
-    chipMine.dataset.filter = "mine";
-    chipMine.textContent = "👤 Meus Jogos";
-    $("#filters")?.appendChild(chipMine);
-  }
 }
 
 function init() {
