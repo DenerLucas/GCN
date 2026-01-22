@@ -1,4 +1,4 @@
-// ===================== GCAN — APP (REVISADO) =====================
+// ===================== GCAN — APP (FULL ADMIN VERSION) =====================
 
 // ===== Utilidades base =====
 (function () {
@@ -23,9 +23,11 @@ function fmtDate(iso) {
       dateStyle: "medium",
       timeStyle: "short",
     });
-  } catch {
-    return iso;
-  }
+  } catch { return iso; }
+}
+
+function escapeHtml(s) {
+  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
 // ===== Toasts =====
@@ -41,46 +43,40 @@ const TOASTS = {
   },
 };
 
-// ===== Storage seguro =====
+// ===== Storage =====
+const STORAGE_KEY = 'gcan_games_v3';
+const AUTH_KEY = 'gcan_auth_v1';
+const USER_KEY = 'gcan_public_user';
+
 const safeStorage = (() => {
   try {
-    const t = "__t__";
-    localStorage.setItem(t, "1");
-    localStorage.removeItem(t);
+    localStorage.setItem("__t__", "1");
+    localStorage.removeItem("__t__");
     return localStorage;
   } catch {
     const m = new Map();
     return {
-      getItem: (k) => (m.has(k) ? m.get(k) : null),
+      getItem: (k) => m.get(k) || null,
       setItem: (k, v) => m.set(k, String(v)),
-      removeItem: (k) => m.delete(k),
+      removeItem: (k) => m.delete(k)
     };
   }
 })();
 
-const STORAGE_KEY='gcan_games_v3';
-const AUTH_KEY='gcan_auth_v1';
-const USER_KEY='gcan_public_user';
-
 const PUBLIC_USER_ID = (() => {
   let id = safeStorage.getItem(USER_KEY);
-  if (!id) {
-    id = uid();
-    safeStorage.setItem(USER_KEY, id);
-  }
+  if (!id) { id = uid(); safeStorage.setItem(USER_KEY, id); }
   return id;
 })();
 
 function getAuth() {
-  try {
-    const raw = safeStorage.getItem(AUTH_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  const raw = safeStorage.getItem(AUTH_KEY);
+  return raw ? JSON.parse(raw) : null;
 }
 function setAuth(a) { safeStorage.setItem(AUTH_KEY, JSON.stringify(a)); }
 function clearAuth() { safeStorage.removeItem(AUTH_KEY); }
 
-// ===== Mock DB Inicial =====
+// ===== DB Logic =====
 const MockDB = {
   games: [
     {
@@ -88,33 +84,27 @@ const MockDB = {
       title: "ARCANJOS",
       description: "Skirmish dominical",
       field: "ARCANJOS",
-      crest: null,
       date: "2025-05-18T10:00:00",
       status: "open",
       pinned: true,
       total_slots: 45,
-      guests_only: false,
-      attendees: [{ user_id: "u1", nickname: "Airt3st1", team: "", apd: "APD1234", guest: false, gdpr: true }],
-      location: { text: "Braga, Portugal" },
+      attendees: [],
+      location: { text: "Braga, Portugal" }
     }
   ],
   users: [
-    { id:'admin-1', role:'admin', name:'Admin', username:'admin', password:'airsoft2025', field:'GCAN' }
+    { id: 'admin-1', role: 'admin', name: 'Admin', username: 'admin', password: 'airsoft2025' }
   ]
 };
 
-function loadDB(){
-  try {
-    const s = safeStorage.getItem(STORAGE_KEY);
-    if(s) return JSON.parse(s);
-  } catch(e){}
+function loadDB() {
+  const s = safeStorage.getItem(STORAGE_KEY);
+  if (s) return JSON.parse(s);
   saveDB(MockDB);
-  return JSON.parse(JSON.stringify(MockDB));
+  return MockDB;
 }
 
-function saveDB(db){
-  safeStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-}
+function saveDB(db) { safeStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
 
 // ===== State =====
 const state = {
@@ -133,80 +123,32 @@ function calcStatus(g) {
 }
 function isJoined(g) { return g.attendees.some((a) => a.user_id === PUBLIC_USER_ID); }
 
-function escapeHtml(s){
-  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-
-// ===== Modal System =====
-function openModal({ title = "", contentHTML = "", footerHTML = "", onMount = null, className = "" }) {
+// ===== UI: Modais =====
+function openModal({ title, contentHTML, footerHTML, onMount }) {
   const overlay = $("#overlay");
-  if (!overlay) return;
-
   overlay.innerHTML = `
-    <div class="modal ${className}">
+    <div class="modal">
       <div class="modal-head">
         <h3>${title}</h3>
-        <button class="icon-btn" id="modalCloseX" aria-label="Fechar">✕</button>
+        <button class="icon-btn" id="btnClose">✕</button>
       </div>
       <div class="modal-body">${contentHTML}</div>
       ${footerHTML ? `<div class="modal-foot">${footerHTML}</div>` : ""}
     </div>
   `;
   overlay.hidden = false;
-
-  const closeBtn = $("#modalCloseX");
-  if (closeBtn) closeBtn.onclick = closeModal;
-
-  if (typeof onMount === "function") onMount();
+  $("#btnClose").onclick = closeModal;
+  if (onMount) onMount();
 }
 
-function closeModal() {
-  const overlay = $("#overlay");
-  if (overlay) {
-    overlay.hidden = true;
-    overlay.innerHTML = "";
-  }
-}
+function closeModal() { $("#overlay").hidden = true; }
 
 // ===== Render =====
-function cardHTML(g) {
-  const st = calcStatus(g);
-  const canJoin = st === "aberto" && !isJoined(g);
-  const crest = g.crest ? `<img src="${g.crest}" alt="Equipa">` : `<span>${(g.field || "?")[0]}</span>`;
-
-  return `
-  <article class="card" data-id="${g.id}">
-    <div class="hd">
-      <span class="badge ${st}">${st}</span>
-      ${g.pinned ? `<span class="pin">📌</span>` : ""}
-      <div class="crest-lg">${crest}</div>
-    </div>
-    <div class="body">
-      <div class="row">
-        <strong>${escapeHtml(g.title)}</strong>
-        <div class="spacer"></div>
-        <span class="muted">${fmtDate(g.date)}</span>
-      </div>
-      <div class="muted">${escapeHtml(g.description || "")}</div>
-      <div class="muted">
-        ${g.attendees.length}/${g.total_slots} inscritos • ${remaining(g)} vagas
-      </div>
-      <div class="btn-row">
-        <button class="btn ok" data-action="join" ${canJoin ? "" : "disabled"}>✅ Entrar</button>
-        <button class="btn" data-action="leave" ${isJoined(g) ? "" : "hidden"}>❌ Sair</button>
-        <button class="btn" data-action="list">📄 Lista</button>
-        <button class="btn" data-action="copy">🔗 Link</button>
-      </div>
-    </div>
-  </article>`;
-}
-
 function render() {
   const grid = $("#grid");
   if (!grid) return;
 
   let list = [...state.games];
-
   if (state.filter !== "all") {
     list = list.filter(g => {
       if (state.filter === "open") return calcStatus(g) === "aberto";
@@ -216,85 +158,91 @@ function render() {
     });
   }
 
-  if (state.search) {
-    const t = state.search.toLowerCase();
-    list = list.filter(g => (g.title + g.field).toLowerCase().includes(t));
-  }
-
   list.sort((a, b) => (!!b.pinned - !!a.pinned) || new Date(a.date) - new Date(b.date));
-  grid.innerHTML = list.map(cardHTML).join("");
+  grid.innerHTML = list.map(g => `
+    <article class="card" data-id="${g.id}">
+      <div class="hd" style="background-image:url('assets/img/camo-header.jpg')">
+        <span class="badge ${calcStatus(g)}">${calcStatus(g)}</span>
+        ${g.pinned ? `<span class="pin">📌</span>` : ""}
+      </div>
+      <div class="body">
+        <strong>${escapeHtml(g.title)}</strong>
+        <p class="muted">${fmtDate(g.date)} - ${g.field}</p>
+        <p class="muted">${g.attendees.length}/${g.total_slots} inscritos</p>
+        <div class="btn-row">
+          <button class="btn ok" data-action="join" ${calcStatus(g) === 'aberto' && !isJoined(g) ? "" : "disabled"}>Entrar</button>
+          <button class="btn" data-action="list">Lista</button>
+          ${isJoined(g) ? `<button class="btn danger" data-action="leave">Sair</button>` : ""}
+        </div>
+      </div>
+    </article>
+  `).join("");
 }
 
-// ===== Actions =====
+// ===== Admin Functions =====
 function syncTopbar() {
   const info = $("#sessionInfo");
-  const btns = [$("#btnCreate"), $("#btnUsers"), $("#btnLogs")];
-  
   if (!info) return;
-
   if (!state.auth) {
     info.textContent = "";
-    btns.forEach(b => b && (b.hidden = true));
-    return;
+    $$("#btnCreate, #btnUsers, #btnLogs").forEach(b => b.hidden = true);
+  } else {
+    info.textContent = `${state.auth.username} (${state.auth.role})`;
+    $$("#btnCreate, #btnUsers, #btnLogs").forEach(b => b.hidden = state.auth.role !== 'admin');
   }
-
-  info.textContent = `${state.auth.username} (${state.auth.role})`;
-  const isAdmin = state.auth.role === "admin";
-  btns.forEach(b => b && (b.hidden = !isAdmin));
 }
 
-function openJoinModal(game) {
+function openCreateGameModal() {
   openModal({
-    title: `Entrar no jogo`,
+    title: "Criar Novo Jogo",
     contentHTML: `
       <div class="form">
-        <div class="field"><label>Nickname</label><input id="jNick" type="text" /></div>
-        <div class="field"><label>Equipa</label><input id="jTeam" type="text" /></div>
-        <div class="chk"><input id="jGuest" type="checkbox" /><span>Sou convidado</span></div>
-        <div class="field"><label>APD *</label><input id="jAPD" type="text" /></div>
-        <div class="chk"><input id="jGDPR" type="checkbox" /><span>Aceito GDPR *</span></div>
+        <div class="field"><label>Título</label><input id="cgTitle" type="text" /></div>
+        <div class="field"><label>Campo</label><input id="cgField" type="text" /></div>
+        <div class="field"><label>Data</label><input id="cgDate" type="datetime-local" /></div>
+        <div class="field"><label>Vagas</label><input id="cgSlots" type="number" value="20" /></div>
       </div>
     `,
-    footerHTML: `<button class="btn" id="jCancel">Cancelar</button><button class="btn ok" id="jConfirm">Confirmar</button>`,
+    footerHTML: `<button class="btn ok" id="cgSave">Criar</button>`,
     onMount: () => {
-      const guest = $("#jGuest");
-      const apd = $("#jAPD");
-      const confirm = $("#jConfirm");
-      
-      $("#jCancel").onclick = closeModal;
-
-      guest.onchange = () => {
-        apd.disabled = guest.checked;
-        apd.value = guest.checked ? "" : apd.value;
-      };
-
-      confirm.onclick = () => {
-        if (!$("#jGDPR").checked) return TOASTS.show("Aceite o GDPR", "error");
-        if (!guest.checked && $("#jAPD").value.length < 3) return TOASTS.show("APD obrigatório", "error");
-
-        game.attendees.push({
-          user_id: PUBLIC_USER_ID,
-          nickname: $("#jNick").value,
-          team: $("#jTeam").value,
-          apd: $("#jAPD").value,
-          guest: guest.checked,
-          gdpr: true
-        });
-
-        const db = loadDB();
-        db.games = state.games;
-        saveDB(db);
-        closeModal();
-        TOASTS.show("Inscrito!");
+      $("#cgSave").onclick = () => {
+        const newGame = {
+          id: uid(),
+          title: $("#cgTitle").value,
+          field: $("#cgField").value,
+          date: $("#cgDate").value,
+          total_slots: Number($("#cgSlots").value),
+          status: "open",
+          attendees: []
+        };
+        state.games.push(newGame);
+        saveDB({ games: state.games, users: state.users });
         render();
+        closeModal();
+        TOASTS.show("Jogo criado!");
       };
     }
   });
 }
 
+function openModeratorsModal() {
+  const list = state.users.map(u => `<li>${u.username} (${u.role})</li>`).join("");
+  openModal({
+    title: "Gestão de Utilizadores",
+    contentHTML: `<ul>${list}</ul><p class="muted">Funcionalidade de adição em breve.</p>`
+  });
+}
+
+function openLogsModal() {
+  openModal({
+    title: "Logs do Sistema",
+    contentHTML: `<pre class="pre">Sessão iniciada por ${state.auth.username}\nBase de dados carregada.</pre>`
+  });
+}
+
 function openAdminModal() {
   openModal({
-    title: "Admin Login",
+    title: "Login Admin",
     contentHTML: `
       <div class="form">
         <div class="field"><label>User</label><input id="admU" type="text" /></div>
@@ -306,50 +254,66 @@ function openAdminModal() {
       $("#admLogin").onclick = () => {
         const u = $("#admU").value;
         const p = $("#admP").value;
-        const db = loadDB();
-        const found = db.users.find(x => x.username === u && x.password === p);
-        
+        const found = state.users.find(x => x.username === u && x.password === p);
         if (found) {
-          state.auth = { role: found.role, username: found.username };
-          setAuth(state.auth);
+          state.auth = found;
+          setAuth(found);
           syncTopbar();
           closeModal();
-          TOASTS.show("Bem-vindo!");
-        } else {
-          TOASTS.show("Erro de login", "error");
-        }
+          TOASTS.show("Sessão iniciada");
+        } else { TOASTS.show("Credenciais inválidas", "error"); }
       };
     }
   });
 }
 
-// ===== Inicialização =====
+function openJoinModal(game) {
+  openModal({
+    title: "Inscrição",
+    contentHTML: `<div class="form"><div class="field"><label>Nickname</label><input id="jNick" type="text" /></div></div>`,
+    footerHTML: `<button class="btn ok" id="jConfirm">Confirmar</button>`,
+    onMount: () => {
+      $("#jConfirm").onclick = () => {
+        game.attendees.push({ user_id: PUBLIC_USER_ID, nickname: $("#jNick").value });
+        saveDB({ games: state.games, users: state.users });
+        render();
+        closeModal();
+        TOASTS.show("Inscrito!");
+      };
+    }
+  });
+}
+
+// ===== Eventos =====
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
 
   if (btn.id === "btnAdmin") return openAdminModal();
+  if (btn.id === "btnCreate") return openCreateGameModal();
+  if (btn.id === "btnUsers") return openModeratorsModal();
+  if (btn.id === "btnLogs") return openLogsModal();
   if (btn.id === "ctaGo") return $("#grid")?.scrollIntoView({ behavior: "smooth" });
 
   const card = btn.closest(".card");
   if (!card) return;
-
   const g = state.games.find(x => x.id === card.dataset.id);
   const action = btn.dataset.action;
 
   if (action === "join") openJoinModal(g);
   if (action === "list") {
-    const list = g.attendees.map((a, i) => `${i+1}. ${a.nickname || 'Anónimo'}`).join("\n");
-    openModal({ title: "Inscritos", contentHTML: `<pre class="pre">${list || "Vazio"}</pre>` });
+    const list = g.attendees.map(a => a.nickname).join("\n");
+    openModal({ title: "Inscritos", contentHTML: `<pre class="pre">${list || "Ninguém ainda"}</pre>` });
   }
   if (action === "leave") {
     g.attendees = g.attendees.filter(a => a.user_id !== PUBLIC_USER_ID);
     saveDB({ games: state.games, users: state.users });
     render();
-    TOASTS.show("Saiu do jogo");
+    TOASTS.show("Inscrição removida");
   }
 });
 
+// ===== Init =====
 function init() {
   const db = loadDB();
   state.games = db.games;
