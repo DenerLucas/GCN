@@ -1,4 +1,4 @@
-// ===================== GCAN — SISTEMA FINAL CONSOLIDADO =====================
+// ===================== GCAN — CÓDIGO FINAL VERIFICADO =====================
 
 (function () {
   const y = document.getElementById("year");
@@ -155,7 +155,6 @@ function render() {
   }
 }
 
-// --- MODAIS ---
 function openModal({ title, contentHTML, footerHTML, onMount }) {
   const overlay = $("#overlay");
   overlay.innerHTML = `<div class="modal"><div class="modal-head"><h3>${title}</h3><button class="btn icon-btn" id="btnClose">✕</button></div><div class="modal-body">${contentHTML}</div>${footerHTML ? `<div class="modal-foot" style="padding:15px; border-top:1px solid #2a322c; display:flex; justify-content:flex-end;">${footerHTML}</div>` : ""}</div>`;
@@ -168,7 +167,7 @@ function openJoinModal(gameId) {
   const g = state.games.find(x => x.id === gameId);
   openModal({
     title: "Inscrição",
-    contentHTML: `<div class="form"><div class="field"><label>Nick</label><input id="jN"></div><div class="field"><label>Equipa</label><input id="jT"></div></div>`,
+    contentHTML: `<div class="form"><div class="field"><label>Nick / Nome</label><input id="jN"></div><div class="field"><label>Equipa</label><input id="jT"></div></div>`,
     footerHTML: `<button class="btn ok" id="jC">Confirmar</button>`,
     onMount: () => {
       $("#jC").onclick = () => {
@@ -177,7 +176,7 @@ function openJoinModal(gameId) {
         g.attendees.push({ id: uid(), nickname: $("#jN").value, team: $("#jT").value || "Individual", paid: false, checkedIn: false });
         saveDB({ games: state.games, users: state.users });
         $("#overlay").hidden = true;
-        TOASTS.show("Inscrito!");
+        TOASTS.show("Inscrição Confirmada!");
       };
     }
   });
@@ -200,7 +199,7 @@ function openListModal(gameId) {
 
   openModal({
     title: "Lista: " + g.title,
-    contentHTML: `<table class="table"><thead><tr><th>Jogador</th><th style="text-align:right;">Estado</th></tr></thead><tbody>${rows || '<tr><td colspan="2">Vazio</td></tr>'}</tbody></table>`
+    contentHTML: `<table class="table" style="width:100%"><thead><tr><th>Jogador</th><th style="text-align:right;">Estado</th></tr></thead><tbody>${rows || '<tr><td colspan="2">Vazio</td></tr>'}</tbody></table>`
   });
 }
 
@@ -215,11 +214,11 @@ function openGameModal(gameId = null) {
   openModal({
     title: g ? "Editar Jogo" : "Criar Novo Jogo",
     contentHTML: `<div class="form">
-      <div class="field"><label>Título</label><input id="gT" value="${g?.title || ''}"></div>
-      <div class="field"><label>Vagas</label><input id="gV" type="number" value="${g?.total_slots || 30}"></div>
-      <div class="field"><label>Data</label><input id="gD" type="datetime-local" value="${g?.date || ''}"></div>
+      <div class="field"><label>Título do Jogo</label><input id="gT" value="${g?.title || ''}"></div>
+      <div class="field"><label>Número de Vagas</label><input id="gV" type="number" value="${g?.total_slots || 30}"></div>
+      <div class="field"><label>Data e Hora</label><input id="gD" type="datetime-local" value="${g?.date || ''}"></div>
     </div>`,
-    footerHTML: `<button class="btn ok" id="gS">Guardar</button>`,
+    footerHTML: `<button class="btn ok" id="gS">Guardar Jogo</button>`,
     onMount: () => {
       $("#gS").onclick = () => {
         if (!$("#gT").value || !$("#gD").value) return TOASTS.show("Campos obrigatórios", "error");
@@ -231,23 +230,23 @@ function openGameModal(gameId = null) {
   });
 }
 
-window.deleteGame = (id) => { if (confirm("Apagar jogo?")) { state.games = state.games.filter(x => x.id !== id); saveDB({ games: state.games, users: state.users }); } };
+window.deleteGame = (id) => { if (confirm("Apagar este jogo permanentemente?")) { state.games = state.games.filter(x => x.id !== id); saveDB({ games: state.games, users: state.users }); } };
 
 function openModsModal() {
   const renderList = () => state.users.filter(u => u.role === 'moderator').map(m => `
-    <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:5px; border-bottom:1px solid #222;">
+    <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:8px; border-bottom:1px solid #222;">
       <span>${m.username} <br><small class="muted">${m.field}</small></span>
-      <button onclick="deleteMod('${m.id}')" class="btn danger" style="padding:2px 6px;">✕</button>
+      <button onclick="deleteMod('${m.id}')" class="btn danger" style="padding:2px 8px;">✕</button>
     </li>`).join("");
 
   openModal({
-    title: "Gestão de Moderadores",
+    title: "Gestão de Moderadores GCN",
     contentHTML: `<div class="form">
-      <input id="mE" type="email" placeholder="E-mail">
-      <input id="mP" type="password" placeholder="Pass (min 6)">
-      <input id="mF" placeholder="Nome do Campo">
-      <input id="mL" placeholder="📍 Localização (Coordenadas)">
-      <button class="btn ok" id="mB">Criar Moderador</button>
+      <div class="field"><label>E-mail de Login</label><input id="mE" type="email" placeholder="ex: campo@gcan.pt"></div>
+      <div class="field"><label>Password (mín. 6)</label><input id="mP" type="password"></div>
+      <div class="field"><label>Nome do Campo</label><input id="mF"></div>
+      <div class="field"><label>📍 Localização (Coordenadas)</label><input id="mL" placeholder="41.123, -8.123"></div>
+      <button class="btn ok" id="mB">Registar Moderador</button>
       <hr style="border-color:#222; margin:15px 0;"><ul id="modList">${renderList()}</ul>
     </div>`,
     onMount: () => {
@@ -262,12 +261,12 @@ function openModsModal() {
   });
 }
 
-window.deleteMod = (id) => { if (confirm("Remover moderador?")) { state.users = state.users.filter(u => u.id !== id); saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true; } };
+window.deleteMod = (id) => { if (confirm("Remover este moderador?")) { state.users = state.users.filter(u => u.id !== id); saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true; } };
 
 async function openAdminLogin() {
   openModal({
-    title: "Acesso Seguro",
-    contentHTML: `<div class="form"><input id="aE" type="email" placeholder="E-mail"><input id="aP" type="password" placeholder="Pass"></div>`,
+    title: "Acesso Seguro GCAN",
+    contentHTML: `<div class="form"><input id="aE" type="email" placeholder="E-mail"><input id="aP" type="password" placeholder="Password"></div>`,
     footerHTML: `<button class="btn ok" id="aL">Entrar</button>`,
     onMount: () => {
       $("#aL").onclick = async () => {
@@ -284,7 +283,7 @@ function syncTopbar() {
     info.innerHTML = "";
     $("#btnCreate").hidden = $("#btnUsers").hidden = $("#filterMine").hidden = true;
   } else {
-    info.innerHTML = `${state.auth.username} <button class="btn icon-btn" id="btnLogout" style="font-size:11px; color:var(--danger);">Sair</button>`;
+    info.innerHTML = `<span style="font-size:11px;">${state.auth.username}</span> <button class="btn ghost" id="btnLogout" style="padding:2px 6px; font-size:10px; color:var(--danger);">Sair</button>`;
     $("#btnLogout").onclick = async () => { await window.signOutUser(window.fbAuth); location.reload(); };
     $("#btnCreate").hidden = false;
     $("#filterMine").hidden = false;
