@@ -222,19 +222,35 @@ function syncTopbar() {
 // LOGIN UNIFICADO: Aceita qualquer utilizador da base de dados
 function openAdminLogin() {
   openModal({
-    title: "Acesso à Plataforma",
-    contentHTML: `<div class="form">
-      <div class="field"><label>Utilizador</label><input id="aU" placeholder="ex: admin ou gcn" /></div>
-      <div class="field"><label>Password</label><input id="aP" type="password" /></div>
-    </div>`,
+    title: "Acesso Seguro GCAN",
+    contentHTML: `
+      <div class="form">
+        <div class="field"><label>E-mail</label><input id="aU" type="email" placeholder="exemplo@gcan.pt" /></div>
+        <div class="field"><label>Password</label><input id="aP" type="password" /></div>
+      </div>`,
     footerHTML: `<button class="btn ok" id="aL">Entrar</button>`,
     onMount: () => {
-      $("#aL").onclick = () => {
-        const u = state.users.find(x => x.username.trim() === $("#aU").value.trim() && x.password.trim() === $("#aP").value.trim());
-        if (u) { 
-          state.auth = u; safeStorage.setItem(AUTH_KEY, JSON.stringify(u)); 
-          location.reload(); 
-        } else TOASTS.show("Credenciais inválidas", "error");
+      $("#aL").onclick = async () => {
+        const email = $("#aU").value.trim();
+        const pass = $("#aP").value.trim();
+
+        try {
+          // Utiliza a função real do Firebase que importamos no index.html
+          const userCredential = await window.signIn(window.fbAuth, email, pass);
+          const user = userCredential.user;
+
+          // Procura os dados adicionais (role, campo) na base de dados usando o UID real
+          const userData = state.users.find(u => u.id === user.uid) || { id: user.uid, role: 'moderator', username: email };
+          
+          state.auth = userData;
+          safeStorage.setItem(AUTH_KEY, JSON.stringify(userData));
+          
+          TOASTS.show("Login bem-sucedido!");
+          location.reload();
+        } catch (error) {
+          console.error(error);
+          TOASTS.show("Erro: " + error.message, "error");
+        }
       };
     }
   });
@@ -317,4 +333,19 @@ function openListModal(g) {
   openModal({ title: "Lista", contentHTML: `<table class="table" style="width:100%"><thead><tr><th>Nick</th><th>Equipa</th></tr></thead><tbody>${rows || '<tr><td>Vazio</td></tr>'}</tbody></table>` });
 }
 
+function init() {
+  if (!window.dbOnValue || !window.onAuthChange) { setTimeout(init, 500); return; }
+  
+  // Verifica se o utilizador já estava logado no Firebase
+  window.onAuthChange(window.fbAuth, (user) => {
+    if (user) {
+      console.log("Utilizador autenticado via Firebase:", user.email);
+    } else {
+      console.log("Nenhum utilizador logado.");
+    }
+  });
+
+  bindGlobalEvents();
+  // ... resto do seu init ...
+}
 init();
