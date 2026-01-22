@@ -28,13 +28,13 @@
         <section class="hero" style="pointer-events: none !important; position: relative; margin-bottom: 30px;">
             <div class="hero-content" style="pointer-events: auto !important;">
                 <h1>🎯 Jogos de Airsoft — Norte</h1>
-                <p>Consulta jogos, vagas disponíveis e inscreve-te nos melhores campos.</p>
-                <button id="ctaGo" class="btn ok">Ver Jogos Disponíveis</button>
+                <p>Consulta jogos e inscreve-te nos melhores campos.</p>
+                <button id="ctaGo" class="btn ok" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth'})">Ver Jogos</button>
             </div>
         </section>
 
         <section class="controls" style="position: relative; z-index: 50 !important; pointer-events: auto !important;">
-            <input type="text" id="search" placeholder="Pesquisar por jogo, campo ou localização...">
+            <input type="text" id="search" placeholder="Pesquisar...">
             <div id="filters" class="filter-row">
                 <button class="chip active" data-filter="all">Todos</button>
                 <button class="chip" data-filter="open">Abertos</button>
@@ -46,7 +46,6 @@
     </main>
 
     <footer class="footer">
-        <p><strong>Segurança:</strong> Óculos obrigatórios · Respeitar FPS · Fair-Play</p>
         <p>GCAN © <span id="year"></span></p>
     </footer>
 
