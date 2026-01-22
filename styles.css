@@ -1,28 +1,31 @@
 :root { --bg: #0b0e0c; --card: #151a17; --muted: #9aa39c; --accent: #7ea35a; --accent-2: #355f2a; --danger: #b64b4b; --border: #2a322c; --radius: 12px; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, sans-serif; background: var(--bg); color: #e7efe9; line-height: 1.5; }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: #e7efe9; overflow-x: hidden; }
 
-/* Navegação: z-index alto para ficar sempre visível */
-.navbar { padding: 12px 20px; background: #0f1411; border-bottom: 1px solid var(--border); position: sticky; top:0; z-index: 1000; }
-.navbar .container { pointer-events: auto !important; }
+/* Navegação sempre no topo e clicável */
+.navbar { padding: 12px 20px; background: #0f1411; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; pointer-events: auto; }
 
-/* Hero: pointer-events none impede que a imagem bloqueie cliques por baixo */
-.hero { background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('assets/img/camo-header.jpg'); background-size: cover; border-radius: 16px; padding: 40px 20px; text-align: center; border: 1px solid var(--border); margin-bottom: 30px; pointer-events: none; }
+/* Hero não bloqueia cliques */
+.hero { background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('assets/img/camo-header.jpg'); background-size: cover; border-radius: 16px; padding: 40px 20px; text-align: center; margin-bottom: 30px; pointer-events: none; }
 .hero-content { pointer-events: auto; }
 
-.controls { background: var(--card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 25px; position: relative; z-index: 10; }
-.controls input { width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; outline: none; }
-
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; position: relative; z-index: 5; }
+/* Grid e Controles */
+main { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-index: 100; }
+.controls { background: var(--card); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 25px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
-/* Overlay: Só existe quando hidden é removido. z-index máximo. */
+/* Overlay acima de tudo */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: grid; place-items: center; z-index: 9999; }
 .overlay[hidden] { display: none !important; }
 
-.modal { background: var(--card); width: min(450px, 95%); border-radius: 16px; border: 1px solid var(--border); padding: 20px; }
-.btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: #1a221c; color: #fff; cursor: pointer; display: inline-flex; align-items: center; }
+.modal { background: var(--card); width: min(450px, 95%); border-radius: 16px; border: 1px solid var(--border); padding: 20px; pointer-events: auto; }
+.btn { padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: #1a221c; color: #fff; cursor: pointer; transition: 0.2s; }
 .btn.ok { background: var(--accent-2); border-color: var(--accent); }
-.chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; margin-right: 5px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.chip { padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; margin-right: 8px; }
 .chip.active { background: var(--accent-2); color: #fff; }
+
 .toasts { position: fixed; bottom: 20px; right: 20px; z-index: 10000; }
+.toast { background: var(--card); padding: 12px 24px; border-radius: 8px; border-left: 4px solid var(--accent); margin-top: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
