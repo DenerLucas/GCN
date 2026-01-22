@@ -7,40 +7,37 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header class="navbar">
-        <div class="container">
-            <div class="brand">
-                <h1>GCAN</h1>
-                <p class="muted">Gestão Campos Airsoft Norte</p>
-            </div>
-            <div class="nav-right">
-                <span id="sessionInfo" class="muted"></span>
-                <div id="adminButtons">
-                    <button id="btnCreate" class="btn ok" hidden>+ Criar Jogo</button>
-                    <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
-                </div>
-                <button id="btnAdmin" class="btn icon-btn">⚙️ Admin</button>
-            </div>
+    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #0f1411; border-bottom: 1px solid #2a322c;">
+        <div class="brand">
+            <h1 style="margin:0; font-size: 20px;">GCAN</h1>
+            <p class="muted" style="margin:0; font-size: 12px;">Gestão Campos Airsoft Norte</p>
+        </div>
+        <div class="nav-right" style="display: flex; align-items: center; gap: 10px;">
+            <span id="sessionInfo" class="muted" style="font-size: 13px;"></span>
+            <button id="btnCreate" class="btn ok" hidden>+ Criar Jogo</button>
+            <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
+            <button id="btnAdmin" class="btn icon-btn">⚙️ Admin</button>
         </div>
     </header>
 
-    <main class="container">
+    <main>
         <section class="hero">
             <h1>🎯 Jogos de Airsoft — Norte</h1>
             <p>Consulta jogos, vagas disponíveis e inscreve-te.</p>
             <button id="ctaGo" class="btn ok">Ver Jogos</button>
         </section>
 
-        <section class="controls">
+        <section class="filters" style="max-width: 1200px; margin: 0 auto;">
             <input type="text" id="search" placeholder="Pesquisar jogo, campo, local...">
-            <div class="filters" id="filters">
+            <div id="filters" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="chip active" data-filter="all">Todos</button>
                 <button class="chip" data-filter="open">Abertos</button>
                 <button class="chip" data-filter="pinned">📌 Fixados</button>
             </div>
         </section>
 
-        <div class="grid" id="grid"></div>
+        <div class="grid" id="grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto;">
+            </div>
     </main>
 
     <footer class="footer">

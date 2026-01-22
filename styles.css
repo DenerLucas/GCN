@@ -279,3 +279,49 @@ main {
   font-size: 20px;
   cursor: pointer;
 }
+/* ================= AJUSTES DE UX (FIREBASE) ================= */
+
+/* Botão Ghost para o Logout */
+.btn.ghost {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    transition: all 0.2s;
+}
+.btn.ghost:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+/* Melhoria na Grid para evitar espaços vazios no Mobile */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* Estilo para as Tabelas de Inscritos (Lista) */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.table th, .table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    font-size: 14px;
+}
+.table th { color: var(--muted); text-transform: uppercase; font-size: 11px; }
+
+/* Destaque para Vagas Críticas */
+.critical-spots {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { color: var(--danger); }
+    50% { color: #ff8080; }
+    100% { color: var(--danger); }
+}
