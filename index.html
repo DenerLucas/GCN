@@ -8,14 +8,14 @@
 </head>
 <body>
     <header class="navbar">
-        <div class="container" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+        <div class="container">
             <div class="brand">
-                <h1 style="color:#fff; font-size:20px;">GCAN</h1>
+                <h1>GCAN</h1>
                 <p class="muted">Gestão Campos Airsoft Norte</p>
             </div>
-            <div class="nav-right" style="display:flex; align-items:center; gap:10px;">
+            <div class="nav-right">
                 <span id="sessionInfo" class="muted"></span>
-                <div id="adminButtons" style="display:flex; gap:8px;">
+                <div id="adminButtons">
                     <button id="btnCreate" class="btn ok" hidden>+ Jogo</button>
                     <button id="btnUsers" class="btn" hidden>👥 Moderadores</button>
                 </div>
@@ -29,12 +29,12 @@
             <div class="hero-content">
                 <h1>🎯 Jogos de Airsoft — Norte</h1>
                 <p>Consulta jogos e inscreve-te nos melhores campos.</p>
-                <button class="btn ok" style="margin-top:15px;" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth'})">Ver Jogos</button>
+                <button class="btn ok" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth'})">Ver Jogos</button>
             </div>
         </section>
 
         <section class="controls">
-            <input type="text" id="search" placeholder="Pesquisar por jogo ou campo...">
+            <input type="text" id="search" placeholder="Pesquisar...">
             <div id="filters" class="filter-row">
                 <button class="chip active" data-filter="all">Todos</button>
                 <button class="chip" data-filter="mine" id="filterMine" hidden>Meus Jogos</button>
@@ -45,7 +45,7 @@
         <div class="grid" id="grid"></div>
     </main>
 
-    <footer style="text-align:center; padding:40px; border-top:1px solid #2a322c; margin-top:40px;">
+    <footer class="footer">
         <p class="muted">GCAN © <span id="year"></span> — Sistema de Gestão de Airsoft</p>
     </footer>
 
