@@ -231,9 +231,12 @@ function openAdminLogin() {
 }
 
 function openModsModal() {
-  const list = state.users.filter(u => u.role === 'moderator').map(m => `
+  // Forçamos a leitura do estado mais recente antes de desenhar a lista
+  const currentMods = state.users.filter(u => u.role === 'moderator');
+  
+  const list = currentMods.map(m => `
     <li style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #2a322c; padding:4px 0;">
-      <span>${m.username} (${m.field})</span>
+      <span>${escapeHtml(m.username)} (${escapeHtml(m.field)})</span>
       <button onclick="deleteMod('${m.id}')" class="btn danger" style="padding:2px 5px; font-size:10px;">X</button>
     </li>`).join("");
     
