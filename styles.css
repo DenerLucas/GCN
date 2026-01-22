@@ -104,3 +104,55 @@ main { max-width: 1200px; margin: 0 auto; padding: 20px; }
 .table td { padding: 8px; border-bottom: 1px solid var(--border); }
 
 .muted { color: var(--muted); font-size: 13px; }
+/* ================= CORREÇÕES DE CAMADAS E CLIQUES ================= */
+
+/* Garante que o Hero não bloqueie os cliques no resto do site */
+.hero {
+    pointer-events: none !important;
+}
+
+.hero-content, .navbar, .controls, .grid, .btn, .chip {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 50;
+}
+
+/* Feedback visual de que o elemento é clicável */
+.btn, .chip, .icon-btn, .badge, .crest-lg {
+    cursor: pointer !important;
+}
+
+/* ================= AJUSTES DE DESIGN (ESTADO VAZIO) ================= */
+
+.empty-state {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.empty-icon {
+    font-size: 50px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Botão de Sair (Logout) */
+.btn.ghost {
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+    background: transparent !important;
+}
+.btn.ghost:hover {
+    background: rgba(182, 75, 75, 0.1) !important;
+}

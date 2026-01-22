@@ -1,4 +1,4 @@
-// ===================== GCAN — VERSÃO ULTIMATE CLOUD + EMPTY STATE =====================
+// ===================== GCAN — VERSÃO ULTIMATE CLOUD + EVENTOS FIX =====================
 
 (function () {
   const y = document.getElementById("year");
@@ -57,11 +57,38 @@ const MockDB = {
 
 function saveDB(data) { if (window.dbSet && window.dbRef && window.db) window.dbSet(window.dbRef(window.db, 'gcan_data'), data); }
 
+// FIX: Garante que os botões do topo funcionem sempre
+function bindGlobalEvents() {
+  const btnAdmin = $("#btnAdmin");
+  if (btnAdmin) btnAdmin.onclick = openAdminLogin;
+
+  const btnCreate = $("#btnCreate");
+  if (btnCreate) btnCreate.onclick = () => openGameModal();
+
+  const btnUsers = $("#btnUsers");
+  if (btnUsers) btnUsers.onclick = openModsModal;
+  
+  const searchInput = $("#search");
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      state.search = e.target.value;
+      render();
+    };
+  }
+}
+
 function init() {
   if (!window.dbOnValue) { setTimeout(init, 500); return; }
+  
+  bindGlobalEvents(); // Liga os botões assim que carrega
+
   window.dbOnValue(window.dbRef(window.db, 'gcan_data'), (snapshot) => {
     const data = snapshot.val();
-    if (data) { state.games = data.games || []; state.users = data.users || MockDB.users; render(); }
+    if (data) { 
+      state.games = data.games || []; 
+      state.users = data.users || MockDB.users; 
+      render(); 
+    }
     else saveDB(MockDB);
     syncTopbar();
   });
@@ -147,8 +174,15 @@ function openGameModal(game = null) {
     onMount: () => {
       $("#gSave").onclick = () => {
         if (!$("#gT").value || !$("#gD").value) return TOASTS.show("Título e Data obrigatórios", "error");
-        if (isEdit) { game.title = $("#gT").value; game.total_slots = Number($("#gS").value); game.date = $("#gD").value; game.description = $("#gDesc").value; }
-        else { state.games.push({ id: uid(), ownerId: state.auth.id, field: state.auth.field, title: $("#gT").value, total_slots: Number($("#gS").value), date: $("#gD").value, description: $("#gDesc").value, attendees: [], pinned: false }); }
+        if (isEdit) { 
+          game.title = $("#gT").value; 
+          game.total_slots = Number($("#gS").value); 
+          game.date = $("#gD").value; 
+          game.description = $("#gDesc").value; 
+        }
+        else { 
+          state.games.push({ id: uid(), ownerId: state.auth.id, field: state.auth.field, title: $("#gT").value, total_slots: Number($("#gS").value), date: $("#gD").value, description: $("#gDesc").value, attendees: [], pinned: false }); 
+        }
         saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
       };
     }
@@ -157,24 +191,34 @@ function openGameModal(game = null) {
 
 function syncTopbar() {
   const info = $("#sessionInfo"); if (!info) return;
-  if (!state.auth) { info.innerHTML = ""; $$("#btnCreate, #btnUsers").forEach(b => b.hidden = true); }
+  if (!state.auth) { 
+    info.innerHTML = ""; 
+    $$("#btnCreate, #btnUsers").forEach(b => b.hidden = true); 
+  }
   else {
-    info.innerHTML = `<span>${state.auth.username}</span> <button class="btn ghost" id="btnLogout">Sair</button>`;
+    info.innerHTML = `<span>${state.auth.username}</span> <button class="btn ghost" id="btnLogout" style="padding:2px 8px; font-size:11px; margin-left:8px;">Sair</button>`;
     $("#btnLogout").onclick = () => { safeStorage.removeItem(AUTH_KEY); location.reload(); };
-    $("#btnCreate").hidden = false; $("#btnUsers").hidden = state.auth.role !== 'admin';
+    $("#btnCreate").hidden = false; 
+    $("#btnUsers").hidden = state.auth.role !== 'admin';
   }
 }
 
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button"); if (!btn) return;
-  if (btn.id === "btnAdmin") return openAdminLogin();
-  if (btn.id === "btnCreate") return openGameModal();
-  if (btn.id === "btnUsers") return openModsModal();
-  if (btn.classList.contains("chip")) { $$(".chip").forEach(c => c.classList.remove("active")); btn.classList.add("active"); state.filter = btn.dataset.filter; render(); return; }
+  
+  // Filtros Chips (Event Delegation)
+  if (btn.classList.contains("chip")) { 
+    $$(".chip").forEach(c => c.classList.remove("active")); 
+    btn.classList.add("active"); 
+    state.filter = btn.dataset.filter; 
+    render(); 
+    return; 
+  }
   
   const card = btn.closest(".card"); if (!card) return;
   const g = state.games.find(x => x.id === card.dataset.id);
   const act = btn.dataset.action;
+  
   if (act === "join") openJoinModal(g);
   if (act === "list") openListModal(g);
   if (act === "maps") window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(btn.dataset.loc)}`, '_blank');
@@ -185,13 +229,17 @@ document.addEventListener("click", (e) => {
 
 function openAdminLogin() {
   openModal({
-    title: "Login",
-    contentHTML: `<div class="form"><div class="field"><label>User</label><input id="aU" /></div><div class="field"><label>Pass</label><input id="aP" type="password" /></div></div>`,
+    title: "Login Admin",
+    contentHTML: `<div class="form"><div class="field"><label>Utilizador</label><input id="aU" /></div><div class="field"><label>Password</label><input id="aP" type="password" /></div></div>`,
     footerHTML: `<button class="btn ok" id="aL">Entrar</button>`,
     onMount: () => {
       $("#aL").onclick = () => {
         const u = state.users.find(x => x.username === $("#aU").value && x.password === $("#aP").value);
-        if (u) { state.auth = u; safeStorage.setItem(AUTH_KEY, JSON.stringify(u)); location.reload(); } else TOASTS.show("Erro", "error");
+        if (u) { 
+          state.auth = u; 
+          safeStorage.setItem(AUTH_KEY, JSON.stringify(u)); 
+          location.reload(); 
+        } else TOASTS.show("Erro: Credenciais inválidas", "error");
       };
     }
   });
@@ -204,9 +252,11 @@ function openJoinModal(g) {
     footerHTML: `<button class="btn ok" id="jC">Confirmar</button>`,
     onMount: () => {
       $("#jC").onclick = () => {
+        if(!$("#jN").value) return TOASTS.show("Nick é obrigatório", "error");
         if (!g.attendees) g.attendees = [];
         g.attendees.push({ nickname: $("#jN").value, team: $("#jT").value, apd: $("#jA").value, user_id: uid() });
         saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
+        TOASTS.show("Inscrição realizada!");
       };
     }
   });
@@ -214,18 +264,35 @@ function openJoinModal(g) {
 
 function openListModal(g) {
   const rows = (g.attendees || []).map(a => `<tr><td>${escapeHtml(a.nickname)}</td><td>${escapeHtml(a.team)}</td></tr>`).join("");
-  openModal({ title: "Lista", contentHTML: `<table class="table" style="width:100%"><thead><tr><th>Nick</th><th>Equipa</th></tr></thead><tbody>${rows || '<tr><td colspan="2">Vazio</td></tr>'}</tbody></table>` });
+  openModal({ 
+    title: "Inscritos: " + g.title, 
+    contentHTML: `<table class="table" style="width:100%"><thead><tr><th>Nick</th><th>Equipa</th></tr></thead><tbody>${rows || '<tr><td colspan="2">Vazio</td></tr>'}</tbody></table>` 
+  });
 }
 
 function openModsModal() {
-  const list = state.users.filter(u => u.role === 'moderator').map(m => `<li>${m.username} (${m.field})</li>`).join("");
+  const list = state.users.filter(u => u.role === 'moderator').map(m => `
+    <li style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #2a322c; padding-bottom:4px;">
+      <span>${m.username} (${m.field})</span>
+    </li>`).join("");
+    
   openModal({
-    title: "Moderadores",
-    contentHTML: `<div class="form"><div class="field"><label>User</label><input id="mU" /></div><div class="field"><label>Pass</label><input id="mP" /></div><div class="field"><label>Campo</label><input id="mF" /></div><button class="btn ok" id="mS">Criar</button><ul>${list}</ul></div>`,
+    title: "Gestão de Moderadores",
+    contentHTML: `
+      <div class="form">
+        <div class="field"><label>User</label><input id="mU" /></div>
+        <div class="field"><label>Pass</label><input id="mP" /></div>
+        <div class="field"><label>Campo</label><input id="mF" /></div>
+        <button class="btn ok" id="mS">Criar Moderador</button>
+        <hr style="margin:15px 0; border:0; border-top:1px solid #2a322c;">
+        <ul style="padding:0; list-style:none;">${list || '<li>Sem moderadores.</li>'}</ul>
+      </div>`,
     onMount: () => {
       $("#mS").onclick = () => {
+        if(!$("#mU").value || !$("#mP").value) return TOASTS.show("User e Pass obrigatórios", "error");
         state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, location: '', crest: '' });
         saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
+        TOASTS.show("Moderador criado!");
       };
     }
   });
