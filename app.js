@@ -1,4 +1,4 @@
-// ===================== GCAN — VERSÃO ULTIMATE CLOUD + EVENTOS FIX =====================
+// ===================== GCAN — VERSÃO ULTIMATE CLOUD CORRIGIDA =====================
 
 (function () {
   const y = document.getElementById("year");
@@ -57,7 +57,6 @@ const MockDB = {
 
 function saveDB(data) { if (window.dbSet && window.dbRef && window.db) window.dbSet(window.dbRef(window.db, 'gcan_data'), data); }
 
-// FIX: Garante que os botões do topo funcionem sempre
 function bindGlobalEvents() {
   const btnAdmin = $("#btnAdmin");
   if (btnAdmin) btnAdmin.onclick = openAdminLogin;
@@ -66,7 +65,10 @@ function bindGlobalEvents() {
   if (btnCreate) btnCreate.onclick = () => openGameModal();
 
   const btnUsers = $("#btnUsers");
-  if (btnUsers) btnUsers.onclick = openModsModal;
+  if (btnUsers) btnUsers.onclick = () => {
+      if (state.auth && state.auth.role === 'admin') openModsModal();
+      else TOASTS.show("Acesso negado", "error");
+  };
   
   const searchInput = $("#search");
   if (searchInput) {
@@ -79,16 +81,10 @@ function bindGlobalEvents() {
 
 function init() {
   if (!window.dbOnValue) { setTimeout(init, 500); return; }
-  
-  bindGlobalEvents(); // Liga os botões assim que carrega
-
+  bindGlobalEvents();
   window.dbOnValue(window.dbRef(window.db, 'gcan_data'), (snapshot) => {
     const data = snapshot.val();
-    if (data) { 
-      state.games = data.games || []; 
-      state.users = data.users || MockDB.users; 
-      render(); 
-    }
+    if (data) { state.games = data.games || []; state.users = data.users || MockDB.users; render(); }
     else saveDB(MockDB);
     syncTopbar();
   });
@@ -201,28 +197,14 @@ function syncTopbar() {
   } else {
     info.innerHTML = `<span>${state.auth.username}</span> <button class="btn ghost" id="btnLogout" style="padding:2px 8px; font-size:11px; margin-left:8px;">Sair</button>`;
     $("#btnLogout").onclick = () => { safeStorage.removeItem(AUTH_KEY); location.reload(); };
-    
-    // Mostra 'Criar Jogo' para Admin e Moderadores
     if (btnCreate) btnCreate.hidden = false; 
-    
-    // MOSTRA 'MODERADORES' APENAS PARA ADMIN
     if (btnUsers) btnUsers.hidden = (state.auth.role !== 'admin');
-  }
-}
-if (btn.id === "btnUsers") {
-  // Verificação de segurança extra caso o botão seja forçado via consola
-  if (state.auth && state.auth.role === 'admin') {
-    return openModsModal();
-  } else {
-    TOASTS.show("Acesso negado: Apenas administradores", "error");
-    return;
   }
 }
 
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button"); if (!btn) return;
   
-  // Filtros Chips (Event Delegation)
   if (btn.classList.contains("chip")) { 
     $$(".chip").forEach(c => c.classList.remove("active")); 
     btn.classList.add("active"); 
@@ -308,20 +290,9 @@ function openModsModal() {
     onMount: () => {
       $("#mS").onclick = () => {
         if(!$("#mU").value || !$("#mP").value) return TOASTS.show("User e Pass obrigatórios", "error");
-        
-        state.users.push({ 
-          id: uid(), 
-          role: 'moderator', 
-          username: $("#mU").value, 
-          password: $("#mP").value, 
-          field: $("#mF").value, 
-          location: '', 
-          crest: $("#mC").value // Captura o URL da imagem
-        });
-        
-        saveDB({ games: state.games, users: state.users }); 
-        $("#overlay").hidden = true;
-        TOASTS.show("Moderador GCN criado com sucesso!");
+        state.users.push({ id: uid(), role: 'moderator', username: $("#mU").value, password: $("#mP").value, field: $("#mF").value, location: '', crest: $("#mC").value });
+        saveDB({ games: state.games, users: state.users }); $("#overlay").hidden = true;
+        TOASTS.show("Moderador GCN criado!");
       };
     }
   });
