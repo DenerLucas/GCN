@@ -313,7 +313,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// ===== Init =====
+// ===== Init ====
 function init() {
   const db = loadDB();
   state.games = db.games;
