@@ -191,15 +191,31 @@ function openGameModal(game = null) {
 
 function syncTopbar() {
   const info = $("#sessionInfo"); if (!info) return;
-  if (!state.auth) { 
-    info.innerHTML = ""; 
-    $$("#btnCreate, #btnUsers").forEach(b => b.hidden = true); 
-  }
-  else {
+  const btnCreate = $("#btnCreate");
+  const btnUsers = $("#btnUsers");
+
+  if (!state.auth) {
+    info.innerHTML = "";
+    if (btnCreate) btnCreate.hidden = true;
+    if (btnUsers) btnUsers.hidden = true;
+  } else {
     info.innerHTML = `<span>${state.auth.username}</span> <button class="btn ghost" id="btnLogout" style="padding:2px 8px; font-size:11px; margin-left:8px;">Sair</button>`;
     $("#btnLogout").onclick = () => { safeStorage.removeItem(AUTH_KEY); location.reload(); };
-    $("#btnCreate").hidden = false; 
-    $("#btnUsers").hidden = state.auth.role !== 'admin';
+    
+    // Mostra 'Criar Jogo' para Admin e Moderadores
+    if (btnCreate) btnCreate.hidden = false; 
+    
+    // MOSTRA 'MODERADORES' APENAS PARA ADMIN
+    if (btnUsers) btnUsers.hidden = (state.auth.role !== 'admin');
+  }
+}
+if (btn.id === "btnUsers") {
+  // Verificação de segurança extra caso o botão seja forçado via consola
+  if (state.auth && state.auth.role === 'admin') {
+    return openModsModal();
+  } else {
+    TOASTS.show("Acesso negado: Apenas administradores", "error");
+    return;
   }
 }
 
