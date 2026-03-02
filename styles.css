@@ -29,3 +29,50 @@ main { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-i
 .toasts { position: fixed; bottom: 20px; right: 20px; z-index: 10000; }
 .toast { background: var(--card); padding: 12px 24px; border-radius: 8px; border-left: 4px solid var(--accent); margin-top: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); animation: slideIn 0.3s ease; }
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+/* --- ESTÉTICA DOS FORMULÁRIOS E INPUTS --- */
+.form { display: grid; gap: 16px; margin-top: 10px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+/* Estilo global para todos os campos de texto */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="number"], 
+input[type="datetime-local"],
+.controls input {
+    width: 100%;
+    padding: 12px 14px;
+    background-color: #121614; /* Fundo escuro elegante */
+    border: 1px solid var(--border);
+    color: #e7efe9;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease-in-out; /* Animação suave */
+    font-family: inherit;
+}
+
+/* Cor do texto de exemplo (placeholder) */
+input::placeholder { color: #5a665f; }
+
+/* Efeito ao clicar/escrever no campo (Focus) */
+input:focus, .controls input:focus {
+    border-color: var(--accent); /* Borda fica verde GCAN */
+    box-shadow: 0 0 0 3px rgba(126, 163, 90, 0.15); /* Brilho suave à volta */
+    background-color: #171d19;
+}
+
+/* Melhorar o ícone do calendário na escolha da data */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Ajuste na barra de pesquisa para não colar no topo */
+.controls input { margin-bottom: 0; }
