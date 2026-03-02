@@ -66,97 +66,126 @@ function bindEvents() {
   const s = $('#search');
   if (s) s.oninput = (e) => { state.search = e.target.value; render(); };
 }
-
-// --- LÓGICA DE JOGOS ---
+// --- LÓGICA DE JOGO (CRIAÇÃO/EDIÇÃO) ---
 function openGameModal(id = null) {
   const g = id ? state.games.find(x => x.id === id) : null;
   const now = new Date().toISOString().slice(0, 16);
 
   openModal(g ? "Editar Jogo" : "Criar Novo Jogo", `
     <div class="form">
-      <div class="field"><label>Título</label><input id="gT" value="${g?.title || ''}"></div>
-      <div class="field"><label>Vagas</label><input id="gV" type="number" value="${g?.total_slots || 30}"></div>
-      <div class="field"><label>Data</label><input id="gD" type="datetime-local" min="${now}" value="${g?.date || ''}"></div>
+      <div class="field"><label>Título do Jogo</label><input id="gT" value="${g?.title || ''}" class="input-std"></div>
+      <div class="field"><label>Vagas Totais</label><input id="gV" type="number" value="${g?.total_slots || 30}" class="input-std"></div>
+      <div class="field"><label>Data e Hora</label><input id="gD" type="datetime-local" min="${now}" value="${g?.date || ''}" class="input-std"></div>
+      <div class="field"><label>Equipas/Facções (separadas por vírgula)</label><input id="gF" value="${g?.factions || 'Equipa A, Equipa B'}" placeholder="Ex: Camuflados, PMC"></div>
     </div>
   `, `<button class="btn ok" id="saveG">Guardar Jogo</button>`);
 
   $('#saveG').onclick = () => {
+    const title = $('#gT').value.trim();
     const dateVal = $('#gD').value;
-    if (!dateVal || new Date(dateVal) < new Date()) return TOASTS.show("Data inválida ou no passado", "error");
-    if (!$('#gT').value) return TOASTS.show("Título obrigatório", "error");
 
-    const newG = { 
-      id: g?.id || uid(), 
-      ownerId: state.auth.id, 
-      title: $('#gT').value, 
-      total_slots: Number($('#gV').value), 
-      date: dateVal, 
-      attendees: g?.attendees || [] 
+    if (!title || !dateVal) return TOASTS.show("Preencha todos os campos.", "error");
+    if (new Date(dateVal) < new Date()) return TOASTS.show("Não podes criar jogos no passado!", "error");
+
+    const newGameData = {
+      id: g?.id || uid(),
+      ownerId: state.auth.id,
+      title: title,
+      total_slots: Number($('#gV').value),
+      date: dateVal,
+      factions: $('#gF').value.trim() || 'Equipa A, Equipa B', // NOVA LINHA: Guarda as equipas
+      attendees: g?.attendees || []
     };
-    
-    if(g) Object.assign(g, newG); else state.games.push(newG);
+
+    if (g) Object.assign(g, newGameData);
+    else state.games.push(newGameData);
+
     saveDB({ games: state.games, users: state.users });
     $('#overlay').hidden = true;
-    TOASTS.show("Jogo guardado!");
+    TOASTS.show("Jogo guardado com sucesso!");
   };
 }
-
-// --- LÓGICA DE INSCRIÇÕES COM BLOQUEIO DE DUPLICADOS E APD ---
+// --- LÓGICA DE INSCRIÇÃO ---
 function openJoinModal(gameId) {
   const g = state.games.find(x => x.id === gameId);
-  openModal("Inscrição", `
+  
+  // Gera os botões de escolha única (Radio Buttons) com base nas equipas do jogo
+  const factionList = (g.factions || 'Equipa A, Equipa B').split(',').map(f => f.trim());
+  const radios = factionList.map((f, i) => `
+    <label style="display:flex; align-items:center; gap:8px; color:#e7efe9; font-size:14px; cursor:pointer;">
+      <input type="radio" name="jF" value="${escapeHtml(f)}" ${i===0 ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--accent);"> ${escapeHtml(f)}
+    </label>
+  `).join('');
+
+  openModal(`Inscrição: ${g.title}`, `
     <div class="form">
-      <div class="field"><label>Nick / Nome</label><input id="jN"></div>
-      <div class="field"><label>Equipa</label><input id="jT"></div>
-      <div class="field"><label>Nº APD (Opcional para convidados)</label><input id="jA"></div>
+      <div class="field"><label>Nick / Nome de Guerra</label><input id="jN" placeholder="Ex: Ghost"></div>
+      <div class="field"><label>Nº Telemóvel (Obrigatório)</label><input id="jTel" type="tel" placeholder="Ex: 912345678"></div>
+      <div class="field"><label>Nº APD (Opcional se Convidado)</label><input id="jA" placeholder="Insira o Nº ou 'Convidado'"></div>
+      <div class="field" style="margin-top:10px;">
+        <label>Escolha a sua Facção/Equipa</label>
+        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:8px; padding:10px; background:#121614; border:1px solid #2a322c; border-radius:8px;">
+          ${radios}
+        </div>
+      </div>
     </div>
-  `, `<button class="btn ok" id="confJ">Confirmar</button>`);
+  `, `<button class="btn ok" id="confJ">Confirmar Inscrição</button>`);
 
   $('#confJ').onclick = () => {
     const nick = $('#jN').value.trim();
-    if (!nick) return TOASTS.show("Nick obrigatório", "error");
+    const tel = $('#jTel').value.trim();
+    const apd = $('#jA').value.trim() || "Convidado";
+    const team = document.querySelector('input[name="jF"]:checked')?.value || "Sem Equipa";
 
-    // Prevenção de duplicados
-    const isDup = g.attendees?.some(a => a.nickname.toLowerCase() === nick.toLowerCase());
-    if (isDup) return TOASTS.show("Este Nick já está inscrito!", "error");
+    if (!nick || !tel) return TOASTS.show("O Nick e o Telemóvel são obrigatórios!", "error");
+
+    const isDup = (g.attendees || []).some(a => a.nickname.toLowerCase() === nick.toLowerCase());
+    if (isDup) return TOASTS.show("Erro: Esse Nick já está inscrito neste jogo.", "error");
 
     if (!g.attendees) g.attendees = [];
     g.attendees.push({ 
       id: uid(), 
       nickname: nick, 
-      team: $('#jT').value || "Individual", 
-      apd: $('#jA').value || "Convidado",
+      phone: tel, // NOVA LINHA: Guarda o telemóvel
+      team: team, // Guarda a bolinha escolhida
+      apd: apd, 
       paid: false, 
       checkedIn: false 
     });
 
     saveDB({ games: state.games, users: state.users });
     $('#overlay').hidden = true;
-    TOASTS.show("Inscrição realizada!");
+    TOASTS.show("Inscrição confirmada!");
   };
 }
-
+// --- LISTA DE INSCRITOS ---
 function openListModal(gameId) {
   const g = state.games.find(x => x.id === gameId);
   const isOwner = state.auth && (state.auth.id === g.ownerId || state.auth.role === 'admin');
   
-  const rows = (g.attendees || []).map(a => `
+  const rows = (g.attendees || []).map(a => {
+    // Só mostra o telemóvel a quem for dono do jogo ou admin
+    const phoneInfo = (isOwner && a.phone) ? ` • 📱 ${escapeHtml(a.phone)}` : '';
+    
+    return `
     <tr>
-      <td>${a.nickname}<br><small class="muted">${a.team} | APD: ${a.apd}</small></td>
+      <td>
+        <div style="font-weight:bold;">${escapeHtml(a.nickname)}</div>
+        <div class="muted" style="font-size:11px;">Facção: <span style="color:#e7efe9;">${escapeHtml(a.team)}</span> • APD: ${escapeHtml(a.apd)}${phoneInfo}</div>
+      </td>
       <td style="text-align:right;">
         ${isOwner ? `
-          <button class="btn ${a.paid ? 'ok' : ''}" onclick="toggleStatus('${g.id}','${a.id}','paid')">€</button>
-          <button class="btn ${a.checkedIn ? 'ok' : ''}" onclick="toggleStatus('${g.id}','${a.id}','checkedIn')">✅</button>
+          <button class="btn ${a.paid ? 'ok' : ''}" style="padding:4px 8px; font-size:10px;" onclick="toggleStatus('${g.id}','${a.id}','paid')">€</button>
+          <button class="btn ${a.checkedIn ? 'ok' : ''}" style="padding:4px 8px; font-size:10px;" onclick="toggleStatus('${g.id}','${a.id}','checkedIn')">✅</button>
         ` : (a.paid ? '💰' : '⏳')}
       </td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 
-  openModal("Lista de Inscritos", `
-    <div class="muted" style="margin-bottom:10px;">${g.attendees?.length || 0} de ${g.total_slots} vagas preenchidas</div>
-    <table class="table" style="width:100%">${rows || "<tr><td>Ninguém inscrito</td></tr>"}</table>
+  openModal(`Lista (${g.attendees?.length || 0}/${g.total_slots})`, `
+    <table class="table">${rows || "<tr><td colspan='2' style='text-align:center; padding:20px;' class='muted'>Ainda sem inscrições.</td></tr>"}</table>
   `);
 }
-
 window.toggleStatus = (gId, aId, field) => {
   const g = state.games.find(x => x.id === gId);
   const p = g.attendees.find(x => x.id === aId);
