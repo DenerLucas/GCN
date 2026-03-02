@@ -29,13 +29,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-i
 .toasts { position: fixed; bottom: 20px; right: 20px; z-index: 10000; }
 .toast { background: var(--card); padding: 12px 24px; border-radius: 8px; border-left: 4px solid var(--accent); margin-top: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); animation: slideIn 0.3s ease; }
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-/* --- ESTÉTICA DOS FORMULÁRIOS E INPUTS (CORRIGIDO) --- */
+
+/* --- ESTÉTICA DOS FORMULÁRIOS E INPUTS (CORREÇÃO FINAL) --- */
 .form { display: grid; gap: 16px; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; color: var(--muted); font-weight: 500; }
 
-/* Apanha TODOS os inputs dentro das áreas de formulário ou pesquisa */
-.field input, 
+/* Apanha TODOS os inputs dentro de form (Login/Inscrição) e controls (Pesquisa) */
+.form input, 
 .controls input {
     width: 100%;
     padding: 12px 14px;
@@ -50,13 +51,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-i
 }
 
 /* Cor do texto de exemplo (placeholder) */
-.field input::placeholder, 
+.form input::placeholder, 
 .controls input::placeholder { 
     color: #5a665f; 
 }
 
 /* Efeito ao clicar/escrever no campo (Focus) */
-.field input:focus, 
+.form input:focus, 
 .controls input:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(126, 163, 90, 0.15);
@@ -64,13 +65,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-i
 }
 
 /* Melhorar o ícone do calendário na escolha da data */
-.field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+.form input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
     cursor: pointer;
     opacity: 0.6;
     transition: 0.2s;
 }
-.field input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+.form input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
 }
 
